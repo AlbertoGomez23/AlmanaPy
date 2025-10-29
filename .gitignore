@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# Entornos virtuales
+venv
+.venv
+
 # VS Code
 .vscode/
 
@@ -8,3 +12,6 @@
 *.o
 *.out
 *.exe
+
+# Archivo nasa
+.bsp

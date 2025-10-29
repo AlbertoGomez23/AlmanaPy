@@ -1,8 +1,0 @@
-\beamer@endinputifotherversion {3.06pt}
-\select@language {spanish}
-\beamer@sectionintoc {1}{\'Indice}{2}{0}{1}
-\beamer@sectionintoc {2}{Ejemplos}{3}{0}{2}
-\beamer@subsectionintoc {2}{1}{Primeros ejemplos}{3}{0}{2}
-\beamer@subsectionintoc {2}{2}{Otros efectos sencillos}{8}{0}{2}
-\beamer@subsectionintoc {2}{3}{Material gr\'{a}fico}{36}{0}{2}
-\beamer@sectionintoc {3}{Resumen}{47}{0}{3}
