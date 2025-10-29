@@ -1,6 +1,7 @@
 # PROYECTO-PINF
-
-Modern - Código Migrado
-Legacy - Código fortran
-Data - Archivos .dat obtenidos como resultado de Modern
- 
+## Componentes
+- **Modern**: Código migrado.
+- **Legacy**: Código Fortran.
+- **Data**: Archivos `.dat` generados por Modern.
+- **Docs**: Documentación del proyecto.
+- **Tests**: Pruebas unitarias y de integración.
