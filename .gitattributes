@@ -1,0 +1,2 @@
+Modern/Comun/de400.bsp filter=lfs diff=lfs merge=lfs -text
+Modern/Comun/de440.bsp filter=lfs diff=lfs merge=lfs -text
