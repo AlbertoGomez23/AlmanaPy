@@ -43,8 +43,6 @@ def TDBTDT(jd):
     
     return TDBTDT
 
-#FALTA FUNCION GRAD2RAD
-
 """
 Cabecera:   def Rad2SArc(rad)
 PRE:        Recibe radianes
