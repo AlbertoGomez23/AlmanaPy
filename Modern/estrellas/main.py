@@ -1,12 +1,16 @@
 import os
 import sys
 
-# Añadir el directorio actual al path
-sys.path.append(os.path.dirname(__file__))
+# Obtener el directorio actual del script
+current_dir = os.path.dirname(__file__)
+# Obtener el directorio padre
+parent_dir = os.path.dirname(current_dir)
+# Añadir el directorio padre al path
+sys.path.append(parent_dir)
 
 # Importar en el orden correcto para evitar dependencias circulares
 from SubrEstr import *
-from LeeDE440 import *
+from Comun.LeeDE440 import *
 from ReduEstr import *
 from PasoMeGr import *
 from prepaes import *

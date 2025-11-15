@@ -28,7 +28,7 @@ stcomx = STCOMX()
 NRECL = 1
 KSIZE = 2036  # Usamos el tamaño de DE405 como aproximación
 NRFILE = 12
-NAMFIL = "../Comun/de440.bsp"
+NAMFIL = "de440.bsp"
 NCOEFFS = KSIZE // 2
 FIRST = True
 kernel = None
@@ -408,8 +408,9 @@ def FSIZER3():
     # Navegar a la estructura correcta:
     # Desde: /Modern/estrellas/Lee.py
     # Hacia: /Modern/Comun/de440.bsp
-    modern_dir = os.path.dirname(current_dir)  # Sube a /Modern
-    NAMFIL = os.path.join(modern_dir, 'Comun', 'de440.bsp')
+    #modern_dir = os.path.dirname(current_dir)  # Sube a /Modern
+    #NAMFIL = os.path.join(modern_dir, 'Comun', 'de440.bsp')
+    NAMFIL = os.path.join(current_dir, 'de440.bsp')
     
     print(f"Buscando efemérides en: {NAMFIL}")
     
@@ -420,20 +421,7 @@ def FSIZER3():
         # Debug: mostrar estructura de directorios
         print("\nEstructura de directorios:")
         print(f"Directorio actual: {current_dir}")
-        print(f"Directorio Modern: {modern_dir}")
-        
-        if os.path.exists(modern_dir):
-            print("\nContenido de Modern/:")
-            for item in os.listdir(modern_dir):
-                item_path = os.path.join(modern_dir, item)
-                if os.path.isdir(item_path):
-                    print(f"{item}/")
-                    # Mostrar contenido de Comun si existe
-                    if item == 'Comun':
-                        for subitem in os.listdir(item_path):
-                            print(f"{subitem}")
-                else:
-                    print(f"{item}")
+        #print(f"Directorio Modern: {modern_dir}")
         
         raise FileNotFoundError(f"No se encuentra {NAMFIL}")
     

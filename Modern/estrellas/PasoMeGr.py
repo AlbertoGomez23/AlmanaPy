@@ -1,7 +1,7 @@
 import math
 import numpy as np
 from SubrEstr import TDBTDT, TDBUT, PRENUT, PI
-from LeeDE440 import LEEEFJPL
+from Comun.LeeDE440 import LEEEFJPL
 # Constante global
 sti2dia = 0.1157407407407407e-04  # 1/60/60/24
 
@@ -81,7 +81,7 @@ def HORAGREE(ut, delta, alf):
     # Estas funciones necesitan ser implementadas desde LeeDE200
     i = 14  # nutación
     j = 3   # geocéntricas
-    from LeeDE440 import LEEEFJPL
+    from Comun.LeeDE440 import LEEEFJPL
     r, y_val = LEEEFJPL(tdb, i, j)  # r[0] = Δ(psi); r[1] = Δ(eps)
     
     ts = (100.0 * PI + TSMUT(ut) + r[0] * math.cos(r[1])) % (2.0 * PI)

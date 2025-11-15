@@ -2,7 +2,7 @@ import os
 import math
 import numpy as np
 from SubrEstr import DIAJUL, PI, HOMI, HOMIEN, SIGRMI
-from LeeDE440 import ABRDE200, CIERRADE
+from Comun.LeeDE440 import ABRDE200, CIERRADE
 # Variables globales
 PI = math.pi
 err = 0.5e-01  # redondeo a 0.1 de minuto (59.95 -> 60.0 -> 0.0)
@@ -42,8 +42,10 @@ def main():
     
     j = LEEESTAN(i)  # lee los datos del FK5 de las estrellas del AN
     
-    print("Introduzca año (XXXX)")
-    ano = int(input().strip())
+    ano = 1900
+    while ano < 1970 or ano > 2300: 
+        print("Introduzca año (XXXX)")
+        ano = int(input().strip())
     
     # Abrir archivos de salida
     u376, u377, u378, u379, u380, u381, ucaras, ucarde = ABREFICH(i, ano)
@@ -58,9 +60,10 @@ def main():
         else:
             print("*** ERROR: Día del mes no valido ***\n")
     
-
-    print("Introduzca ΔT = TT - UT")
-    decala = float(input().strip())
+    decala = -1
+    while decala < 0 or decala > 100:  
+        print("Introduzca ΔT = TT - UT")
+        decala = float(input().strip())
     
 
 
