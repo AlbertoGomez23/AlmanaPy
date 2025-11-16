@@ -147,117 +147,122 @@ def calculo_paralaje():
     #creamos el fichero .dat
     archivo_datos = rurta_carpeta_datos / f"AN{anio_str}387.DAT"
 
-    with open(archivo_datos, 'w', encoding='utf8') as archivo_salida:
-        
-        #convertimos de grados a radianes   
-        AlturaRadianes[0] = math.radians(AlturaGrados[0])
-        AlturaRadianes[1] = math.radians(AlturaGrados[1])
-        AlturaRadianes[2] = math.radians(AlturaGrados[2])
-        AlturaRadianes[3] = math.radians(AlturaGrados[3])
+    try:
+        with open(archivo_datos, 'w', encoding='utf8') as archivo_salida:
+            
+            #convertimos de grados a radianes   
+            AlturaRadianes[0] = math.radians(AlturaGrados[0])
+            AlturaRadianes[1] = math.radians(AlturaGrados[1])
+            AlturaRadianes[2] = math.radians(AlturaGrados[2])
+            AlturaRadianes[3] = math.radians(AlturaGrados[3])
 
-        #calculamos el número de días en el año
-        JulianoAnioActual = DiaJul(1,1,anio,0.0)
-        JulianoAnioSiguiente = DiaJul(1,1,anio+1,0.0)
-        diasTotales = int(JulianoAnioSiguiente - JulianoAnioActual + 0.5)
+            #calculamos el número de días en el año
+            JulianoAnioActual = DiaJul(1,1,anio,0.0)
+            JulianoAnioSiguiente = DiaJul(1,1,anio+1,0.0)
+            diasTotales = int(JulianoAnioSiguiente - JulianoAnioActual + 0.5)
 
-        dJuliano = DiaJul(2,1,anio,0.0)
+            dJuliano = DiaJul(2,1,anio,0.0)
 
-        #calculamos la geodistancia entre de marte y venus
+            #calculamos la geodistancia entre de marte y venus
 
-        rMarte = GeoDista(dJuliano, 4)      # 4 corresponde a Marte
-        rVenus = GeoDista(dJuliano, 2)      # 2 corresponde a Venus
-        
+            rMarte = GeoDista(dJuliano, 4)      # 4 corresponde a Marte
+            rVenus = GeoDista(dJuliano, 2)      # 2 corresponde a Venus
+            
 
-        #calculamos los valores angulares
-        angMarte1 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[0])))
-        angMarte2 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[1])))
-        angMarte3 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[2])))
-        angVenus = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[3])))
-
-        #formateamos los valores a string para seguir el formato del .dat
-        #guardamos los datos del dia anterior para realizar comparaciones
-        diaPrevio = valores_A_string(angMarte1,angMarte2,angMarte3,angVenus)
-
-        #añadimos los simbolos positivos
-        diaPrevioSimb = signo_pos_A_string(diaPrevio)
-
-        #creamos las dos primeras lineas del .dat en el formato requerido
-        linea1 = f" Ene.&{1:2d}&           &           &           &           \\\\"
-        linea2 = (
-
-            f"     &  &$"
-            f"{diaPrevioSimb[12]}${diaPrevioSimb[13]}\\Minp "
-            f"{diaPrevioSimb[15]}&${diaPrevioSimb[0]}${diaPrevioSimb[1]}\\Minp "
-            f"{diaPrevioSimb[3]}&${diaPrevioSimb[4]}${diaPrevioSimb[5]}\\Minp "
-            f"{diaPrevioSimb[7]}&${diaPrevioSimb[8]}${diaPrevioSimb[9]}\\Minp "
-            f"{diaPrevioSimb[11]}\\\\"
-        )
-
-        #escribimos las lineas en el fichero
-        archivo_salida.write(linea1 + "\n")
-        archivo_salida.write(linea2 + "\n")
-
-        #realizamos un bucle for para el resto de días
-        for dia_del_anio in range(1, diasTotales):
-
-            #obtenemos el valor del dia juliano
-            dJuliano = JulianoAnioActual + dia_del_anio + dT
-
-            #recalculamos las geodistancias
-            rMarte = GeoDista(dJuliano, 4)      
-            rVenus = GeoDista(dJuliano, 2) 
-
-            #recalculamos los 4 angulos
+            #calculamos los valores angulares
             angMarte1 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[0])))
             angMarte2 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[1])))
             angMarte3 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[2])))
             angVenus = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[3])))
 
-            #guardamos los valores del día actual
-            diaActual = valores_A_string(angMarte1,angMarte2,angMarte3,angVenus)
+            #formateamos los valores a string para seguir el formato del .dat
+            #guardamos los datos del dia anterior para realizar comparaciones
+            diaPrevio = valores_A_string(angMarte1,angMarte2,angMarte3,angVenus)
 
-            """""
-            Comparamos entre los datos del día previo y el actual
-            Si entramos en este if, indica que los valores han cambiado, luego hay que escribir una nueva línea en el .dat 
-            """""
-            if diaActual != diaPrevio:
+            #añadimos los simbolos positivos
+            diaPrevioSimb = signo_pos_A_string(diaPrevio)
 
-                #convertimos el Día juliano anterior a fecha legible
-                dia, mes, anioCalculado, hora = DJADia(dJuliano - 1)
+            #creamos las dos primeras lineas del .dat en el formato requerido
+            linea1 = f" Ene.&{1:2d}&           &           &           &           \\\\"
+            linea2 = (
 
-                #actualizamos el valor de diaPrevio con el valor de diaActual para la siguiente iteración
-                diaPrevio = diaActual
+                f"     &  &$"
+                f"{diaPrevioSimb[12]}${diaPrevioSimb[13]}\\Minp "
+                f"{diaPrevioSimb[15]}&${diaPrevioSimb[0]}${diaPrevioSimb[1]}\\Minp "
+                f"{diaPrevioSimb[3]}&${diaPrevioSimb[4]}${diaPrevioSimb[5]}\\Minp "
+                f"{diaPrevioSimb[7]}&${diaPrevioSimb[8]}${diaPrevioSimb[9]}\\Minp "
+                f"{diaPrevioSimb[11]}\\\\"
+            )
 
-                #añadimos los simbolos
-                diaPrevioSimb = signo_pos_A_string(diaPrevio)
+            #escribimos las lineas en el fichero
+            archivo_salida.write(linea1 + "\n")
+            archivo_salida.write(linea2 + "\n")
 
-                #escribimos la nueva línea con la información obtenida
-                linea1 =( 
-                    f" {MesNom(mes)}&{dia:2d}&           &           "
-                    f"&           &           \\\\"
-                )
+            #realizamos un bucle for para el resto de días
+            for dia_del_anio in range(1, diasTotales):
 
-                linea2 =(
-                    f"     &  &$"
-                    f"{diaPrevioSimb[12]}${diaPrevioSimb[13]}\\Minp "
-                    f"{diaPrevioSimb[15]}&${diaPrevioSimb[0]}${diaPrevioSimb[1]}\\Minp "
-                    f"{diaPrevioSimb[3]}&${diaPrevioSimb[4]}${diaPrevioSimb[5]}\\Minp "
-                    f"{diaPrevioSimb[7]}&${diaPrevioSimb[8]}${diaPrevioSimb[9]}\\Minp "
-                    f"{diaPrevioSimb[11]}\\\\"            
-                )
+                #obtenemos el valor del dia juliano
+                dJuliano = JulianoAnioActual + dia_del_anio + dT
 
-                archivo_salida.write(linea1 + "\n")
-                archivo_salida.write(linea2 + "\n")
-            
-        #finalmente, escribimos la última línea (que correspondería al 31 de Diciembre)
-        lineaFinal = (
-            f" Dic.&{31:2d}&           &           "
-            f"&           &           \\\\"
-        )
+                #recalculamos las geodistancias
+                rMarte = GeoDista(dJuliano, 4)      
+                rVenus = GeoDista(dJuliano, 2) 
 
-        archivo_salida.write(lineaFinal + "\n")
+                #recalculamos los 4 angulos
+                angMarte1 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[0])))
+                angMarte2 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[1])))
+                angMarte3 = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[2])))
+                angVenus = Rad2MArc(math.asin(RadioTierra / rMarte * math.cos(AlturaRadianes[3])))
 
-    print(f"Archivo '{archivo_datos}' generado con exitosamente.")
+                #guardamos los valores del día actual
+                diaActual = valores_A_string(angMarte1,angMarte2,angMarte3,angVenus)
+
+                """""
+                Comparamos entre los datos del día previo y el actual
+                Si entramos en este if, indica que los valores han cambiado, luego hay que escribir una nueva línea en el .dat 
+                """""
+                if diaActual != diaPrevio:
+
+                    #convertimos el Día juliano anterior a fecha legible
+                    dia, mes, anioCalculado, hora = DJADia(dJuliano - 1)
+
+                    #actualizamos el valor de diaPrevio con el valor de diaActual para la siguiente iteración
+                    diaPrevio = diaActual
+
+                    #añadimos los simbolos
+                    diaPrevioSimb = signo_pos_A_string(diaPrevio)
+
+                    #escribimos la nueva línea con la información obtenida
+                    linea1 =( 
+                        f" {MesNom(mes)}&{dia:2d}&           &           "
+                        f"&           &           \\\\"
+                    )
+
+                    linea2 =(
+                        f"     &  &$"
+                        f"{diaPrevioSimb[12]}${diaPrevioSimb[13]}\\Minp "
+                        f"{diaPrevioSimb[15]}&${diaPrevioSimb[0]}${diaPrevioSimb[1]}\\Minp "
+                        f"{diaPrevioSimb[3]}&${diaPrevioSimb[4]}${diaPrevioSimb[5]}\\Minp "
+                        f"{diaPrevioSimb[7]}&${diaPrevioSimb[8]}${diaPrevioSimb[9]}\\Minp "
+                        f"{diaPrevioSimb[11]}\\\\"            
+                    )
+
+                    archivo_salida.write(linea1 + "\n")
+                    archivo_salida.write(linea2 + "\n")
+                
+            #finalmente, escribimos la última línea (que correspondería al 31 de Diciembre)
+            lineaFinal = (
+                f" Dic.&{31:2d}&           &           "
+                f"&           &           \\\\"
+            )
+
+            archivo_salida.write(lineaFinal + "\n")
+
+        print(f"Archivo '{archivo_datos}' generado con exitosamente.")
+        
+    except IOError as e:
+        print(f"Error fatal abriendo el archivo {archivo_salida}: {e}")
+        return
 
 #hacemos que este fichero se ejecute como principal
 if __name__ == "__main__":
