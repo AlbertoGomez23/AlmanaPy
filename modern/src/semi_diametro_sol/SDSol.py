@@ -1,28 +1,35 @@
-import os
 import sys
+from pathlib import Path
 import numpy as np
-import spiceypy as spice
 
 # --- Bloque para importar las funciones astronómicas ---
+# 1. Obtener la ruta.
+# Path(__file__) -> El archivo.
+# .resolve()     -> La ruta absoluta (equivale a os.path.abspath).
+# .parent        -> La carpeta del archivo (equivale al primer dirname).
+# .parent.parent -> La carpeta superior (equivale al segundo dirname).
+
 try:
-    current_file_path = os.path.abspath(__file__)
+    ruta_base = Path(__file__).resolve().parent.parent
 except NameError:
-    current_file_path = os.getcwd()
+    # Fallback si estás en una consola interactiva o Jupyter
+    ruta_base = Path.cwd().parent
 
-directorio_padre = os.path.dirname(os.path.dirname(current_file_path))
+# 2. Añadir al sys.path
+# IMPORTANTE: sys.path espera strings, no objetos Path, por eso usamos str()
+ruta_str = str(ruta_base)
 
-if directorio_padre not in sys.path:
-    sys.path.append(directorio_padre)
+if ruta_str not in sys.path:
+    sys.path.append(ruta_str)
+    print(f"Añadido al path: {ruta_str}")
 
+# 3. Bloque de importaciones (se mantiene igual, pero ahora el path ya está configurado)
 try:
-    from Comun import funciones as fun
-except ImportError:
-    raise ImportError("No se pudo importar el módulo 'funciones' desde el directorio 'Comun'.")
-
-try:
-    from Comun import LeeDE440 as lee
-except ImportError:
-    raise ImportError("No se pudo importar el módulo 'LeeDE440' desde el directorio 'Comun'.")
+    from utils import funciones as fun
+    from utils import read_de440 as lee
+except ImportError as e:
+    # Es útil imprimir el error real 'e' para saber qué falló exactamente
+    raise ImportError(f"Error importando módulos desde '{ruta_base}': {e}")
 # -------------------------------------------------------
 
 def SemiDiametroSol():
@@ -50,10 +57,9 @@ def SemiDiametroSol():
     # Construcción de ruta RELATIVA
     # ./DATOS/<año>/AN<ano>387B.DAT
     # -------------------------------------------------------------
-    ruta_base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ruta_datos = os.path.join(ruta_base, "DATOS")
-
-    filename = os.path.join(ruta_datos, f"AN{can}387B.DAT")
+    ruta_base = Path(__file__).resolve().parent.parent.parent
+    filename = ruta_base / "data" / "almanaque_nautico" / f"{can}" / f"AN{can}387B.dat"
+    filename.parent.mkdir(parents=True, exist_ok=True)
 
     # Abrir archivo de salida
     f = open(filename, "w", encoding="utf-8")
