@@ -1,7 +1,7 @@
 [project]
-name = "codigomigrado"
+name = "proyecto-pinf"
 version = "0.1.0"
-description = "Add your description here"
+description = "Cálculo de posiciones planetarias y efemérides astronómicas"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

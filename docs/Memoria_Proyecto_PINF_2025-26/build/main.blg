@@ -1,0 +1,14 @@
+[0] Config.pm:307> INFO - This is Biber 2.19
+[1] Config.pm:310> INFO - Logfile is 'build/main.blg'
+[289] biber-MSWIN64:340> INFO - === 
+[366] Biber.pm:419> INFO - Reading 'build/main.bcf'
+[645] Biber.pm:976> INFO - Using all citekeys in bib section 0
+[685] Biber.pm:4419> INFO - Processing section 0
+[715] Biber.pm:4610> INFO - Looking for bibtex file 'referencias.bib' for section 0
+[836] bibtex.pm:1713> INFO - LaTeX decoding ...
+[846] bibtex.pm:1519> INFO - Found BibTeX data source 'referencias.bib'
+[951] UCollate.pm:68> INFO - Overriding locale 'es-ES' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[952] UCollate.pm:68> INFO - Overriding locale 'es-ES' defaults 'variable = shifted' with 'variable = non-ignorable'
+[958] Biber.pm:4239> INFO - Sorting list 'nty/global//global/global' of type 'entry' with template 'nty' and locale 'es-ES'
+[973] bbl.pm:660> INFO - Writing 'build/main.bbl' with encoding 'UTF-8'
+[975] bbl.pm:763> INFO - Output to build/main.bbl
