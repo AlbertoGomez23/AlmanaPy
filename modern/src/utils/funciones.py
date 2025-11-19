@@ -1,34 +1,9 @@
 import math
 import numpy as np
-from . import read_de440 as de440
-
 # Hemos evitado las funciones de pasar de grados a radianes y viceversa con
 # las funciones de math de math.degrees(radianes) para pasar a grados y 
 # math.radians(grados) para pasar a radianes y la precision es la misma
 # que en el codigo original, 64 bits
-
-"""
-Cabecera:   def GeoDista(jd, p)
-PRE:        Recibe el dia juliano y el numero del planeta
-POST:       Calcula la distancia geocentrica entre la tierra (origen o = 3)
-            y el planeta 'p' en el dia juliano 'jd'
-"""
-
-#queda por probar esta funcion
-def GeoDista(jd, p):
-    o = 3   #origen geocentrico
-    r = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) #vector posicion/velocidad inicializado a 0
-    #Convertir TT -> TDB(Tiempo Dinamico Baricentrico)
-    tdb = TDBTDT(jd)
-
-    #Obtener vector posicion/velocidad [x, y, z, u, v, w]
-    r, y = de440.LEEEFJPL(jd, p, o)
-
-    #Calculardistancia geocentrica
-    distancia = math.sqrt(r[0]**2 + r[1]**2 + r[2]**2)
-
-    return distancia
-
 
 """
 Cabecera:   def TDBTDT(jd)
@@ -36,13 +11,15 @@ PRE:        Recibe el dia juliano
 POST:       Convierte el tiempo juliano TT (Tiempo Terrestre) al tiempo
             juliano TDB (Tiempo Dinamico Baricentrico)
 """
-def TDBTDT(jd):
-    # Calcular el angulo medio del sol en radianes
-    g = math.radians(357.53 + 0.98560028 * (jd - 2451545))
-    # Aplicar la correccion TT -> TDB (segundos convertidos en dias)
-    TDBTDT = jd + (0.001658 * math.sin(g) + 0.000014 * math.sin(2*g))/86400
-    
-    return TDBTDT
+
+def TDBTDT(tt: float) -> float:
+    """
+    Traducción EXACTA de la función Fortran:
+    TDBTDT = tt + (SIN(g)*0.1658D-02 + SIN(2*g)*0.14D-04) / di2s
+    """
+    g = (357.53 + (tt - 2451545.0) * 0.98560028) * (np.pi / 180.0)
+    return tt + (np.sin(g) * 0.1658e-02 + np.sin(2.0 * g) * 0.14e-04) / (1.0 / 86400.0)
+
 
 """
 Cabecera:   def Rad2SArc(rad)
