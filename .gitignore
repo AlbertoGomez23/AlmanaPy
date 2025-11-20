@@ -1,9 +1,19 @@
 # macOS
 .DS_Store
 
-# Entornos virtuales
-venv
-.venv
+# --- Ignorar dependencias ---
+# Nunca subas 'node_modules', 'venv', o 'vendor'.
+# Razón: Las librerías de Windows no funcionan en Linux y viceversa.
+node_modules/
+__pycache__/
+venv/
+.pytest_cache/
+# Si usas PHP/Composer
+vendor/
+
+# --- Ignorar variables de entorno ---
+# Cada desarrollador puede tener claves distintas.
+.env
 
 # VS Code
 .vscode/
@@ -16,5 +26,5 @@ venv
 # Archivo nasa
 .bsp
 
-# Python
-__pycache__
+# --- Ignorar archivos de sistema ---
+Thumbs.db
