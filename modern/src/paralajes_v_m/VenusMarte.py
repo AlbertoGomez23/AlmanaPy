@@ -14,10 +14,10 @@ Windows como Linux
 #obtenemos la ruta absoluta de ESTE fichero
 ruta_VenusMarte = Path(__file__).resolve()
 
-#obtenemos la ruta de la carpeta ParalajesVM
+#obtenemos la ruta de la carpeta paralajes_v_m
 ruta_ParalajesVM = ruta_VenusMarte.parent
 
-#obtenemos la ruta padre tanto de ParalajesVM como de Comun
+#obtenemos la ruta padre tanto de paralajes_v_m como de utils, es decir, str
 ruta_Padre = ruta_ParalajesVM.parent
 
 """""
@@ -31,7 +31,7 @@ if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
 
 #importamos las funciones que necesitemos
-from Comun.funciones import MesNom, DiasMes, Rad2MArc, DiaJul, DJADia, TDBTDT
+from utils.funciones import MesNom, DiasMes, Rad2MArc, DiaJul, DJADia, TDBTDT
 
 #vamos a crear dos funciones que nos ayudarán a mantener el formato de escritura que realiza el archivo FORTRAN original
 """""

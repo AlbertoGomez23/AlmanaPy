@@ -12,13 +12,13 @@ from pagEntera import UNAPAG
 """""
 
 #obtenemos la ruta absoluta de ESTE fichero
-ruta_VenusMarte = Path(__file__).resolve()
+ruta_fichDatAN = Path(__file__).resolve()
 
-#obtenemos la ruta de la carpeta ParalajesVM
-ruta_ParalajesVM = ruta_VenusMarte.parent
+#obtenemos la ruta de la carpeta paginas_an
+ruta_paginas_an = ruta_fichDatAN.parent
 
-#obtenemos la ruta padre tanto de ParalajesVM como de Comun
-ruta_Padre = ruta_ParalajesVM.parent
+#obtenemos la ruta padre tanto de paginas_an como de utils, es decir, src
+ruta_Padre = ruta_paginas_an.parent
 
 """""
 Por último, importamos la carpeta padre en el sys.path
@@ -30,7 +30,7 @@ lista de strings
 if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
 
-from Comun.funciones import DiaJul
+from utils.funciones import DiaJul
 
 """""
 Cabecera: IDIAAN(dia: int, mes: int, anio: int) -> int
