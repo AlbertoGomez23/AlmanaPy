@@ -2,119 +2,172 @@ import sys
 from pathlib import Path
 import numpy as np
 
-# --- Bloque para importar las funciones astronómicas ---
-# 1. Obtener la ruta.
-# Path(__file__) -> El archivo.
-# .resolve()     -> La ruta absoluta (equivale a os.path.abspath).
-# .parent        -> La carpeta del archivo (equivale al primer dirname).
-# .parent.parent -> La carpeta superior (equivale al segundo dirname).
+# =============================================================================
+# MÓDULO DE GENERACIÓN DE TABLAS: SEMIDIÁMETRO SOLAR
+# =============================================================================
+# Propósito: Calcular la variación del semidiámetro del Sol a lo largo de un año
+#            y generar una tabla en formato LaTeX para el Almanaque Náutico.
+#            La tabla muestra la corrección respecto al valor estándar de 16'.
+#
+# Entradas:  Solicita al usuario el Año y el valor de Delta T por consola.
+# Salidas:   Genera un archivo .dat en la ruta de datos del proyecto.
+# =============================================================================
 
+# --- CONFIGURACIÓN DE RUTAS E IMPORTACIÓN DINÁMICA ---
+# Bloque para asegurar que Python encuentre los módulos 'utils' 
+# subiendo dos niveles en la jerarquía de directorios.
+
+# 1. Obtener la ruta base del proyecto
 try:
     ruta_base = Path(__file__).resolve().parent.parent
 except NameError:
     # Fallback si estás en una consola interactiva o Jupyter
     ruta_base = Path.cwd().parent
 
-# 2. Añadir al sys.path
-# IMPORTANTE: sys.path espera strings, no objetos Path, por eso usamos str()
+# 2. Añadir al sys.path para permitir imports relativos
 ruta_str = str(ruta_base)
-
 if ruta_str not in sys.path:
     sys.path.append(ruta_str)
     print(f"Añadido al path: {ruta_str}")
 
-# 3. Bloque de importaciones (se mantiene igual, pero ahora el path ya está configurado)
+# 3. Importación de módulos propios (Astronómicos y de Utilidades)
 try:
-    from utils import funciones as fun
-    from utils import read_de440 as lee
+    from utils import funciones2 as fun      # Conversiones de tiempo y formatos
+    from utils import read_de4402 as lee     # Lectura de efemérides (Skyfield wrapper)
 except ImportError as e:
-    # Es útil imprimir el error real 'e' para saber qué falló exactamente
     raise ImportError(f"Error importando módulos desde '{ruta_base}': {e}")
-# -------------------------------------------------------
+
 
 def SemiDiametroSol():
-    # Variables equivalentes
+    """
+    CABECERA:       SemiDiametroSol()
+    DESCRIPCIÓN:    Calcula el semidiámetro angular del Sol día a día y genera un 
+                    archivo de texto con código LaTeX.
+                    
+                    La tabla resultante muestra fechas y valores solo cuando hay 
+                    un cambio en el valor redondeado (compresión de tabla).
+                    El valor mostrado es (Semidiámetro - 16 minutos de arco).
+
+    PRECONDICIÓN:   1. Ejecución interactiva: Requiere entrada por teclado del 
+                       Año (int) y Delta T (float en segundos).
+                    2. Sistema de archivos: Debe tener permisos de escritura en
+                       ../data/almanaque_nautico/
+    
+    POSTCONDICIÓN:  Genera un archivo 'AN<Año>387B.dat'.
+                    El contenido está formateado con sintaxis LaTeX específica 
+                    (ej: columnas &, saltos \\, macros \Minp).
+    """
+
+    # --- CONSTANTES ---
+    # rs: Radio angular del Sol en radianes a una distancia de 1 UA.
+    # Valor IAU estándar convencional.
+    rs = 4.65247265886874E-3
+
+    # Variables de formateo de texto (inicialización)
     c4 = "    "
     c04 = "    "
     c004 = "    "
 
-    # Constante rs = radio angular del Sol en radianes a 1 UA
-    rs = 4.65247265886874E-3
-
     # -------------------------------------------------------------
-    # Entrada de datos
+    # 1. Entrada de datos (Interacción con usuario)
     # -------------------------------------------------------------
     print("Introduzca año a calcular:")
     ano = int(input().strip())
 
     print("Introduzca dT = TT - UT (en segundos):")
     dT = float(input().strip())
-    dT = dT / 86400.0   # pasar a días
+    dT = dT / 86400.0   # Conversión de segundos a días
 
-    can = f"{ano:04d}"
+    can = f"{ano:04d}"  # Año formateado como string (ej. "2024")
 
     # -------------------------------------------------------------
-    # Construcción de ruta RELATIVA
-    # ./DATOS/<año>/AN<ano>387B.DAT
+    # 2. Configuración del Archivo de Salida
+    #    Ruta: .../data/almanaque_nautico/<año>/AN<ano>387B.dat
     # -------------------------------------------------------------
-    ruta_base = Path(__file__).resolve().parent.parent.parent
-    filename = ruta_base / "data" / "almanaque_nautico" / f"{can}" / f"AN{can}387B.dat"
+    # Navegamos 4 niveles arriba para llegar a la raíz del proyecto
+    ruta_proyecto = Path(__file__).resolve().parent.parent.parent.parent
+    
+    # Construcción de ruta segura con pathlib
+    filename = ruta_proyecto / "data" / "almanaque_nautico" / f"{can}" / f"AN{can}387B.dat"
+    
+    # Crear directorios si no existen (mkdir -p)
     filename.parent.mkdir(parents=True, exist_ok=True)
 
-    # Abrir archivo de salida
+    # Abrir archivo en modo escritura (sobrescribe si existe)
     f = open(filename, "w", encoding="utf-8")
 
     # -------------------------------------------------------------
-    # j = número de días del año
+    # 3. Cálculos Iniciales
     # -------------------------------------------------------------
+    # Calcular días totales del año (j) manejando bisiestos
+    # Se calcula la diferencia de JD entre el 1 de Enero del año sig. y el actual.
     j = int(fun.DiaJul(1, 1, ano + 1, 0.0) - fun.DiaJul(1, 1, ano, 0.0) + 0.5)
 
-    # Día juliano del 2 de enero
+    # Cálculo inicial para el 2 de enero (Referencia inicial)
     dj = fun.DiaJul(2, 1, ano, 0.0)
+    
+    # Obtener distancia Tierra-Sol (ID 10) en UA
     r = lee.GeoDista(dj, 10)
 
-    # c04 = formato F4.1 del valor
+    # FÓRMULA: Semidiámetro aparente = arcsin(RadioSol / Distancia)
+    # Convertimos a minutos de arco y restamos 16' (valor base tabla)
     valor = fun.Rad2MArc(np.arcsin(rs / r)) - 16
+    
+    # Formateo inicial: float con 1 decimal y ancho 4 (ej: " 0.2")
     c04 = f"{valor:4.1f}"
 
-    # c004 = copia modificable de c04
+    # Lógica de formateo de signos para LaTeX (+/-)
     c004 = list("    ")
-    c004[1:4] = c04[1:4]   # posiciones 2 a 4
+    c004[1:4] = c04[1:4]   # Copiamos dígitos y punto
 
-    # signo
     if (c04[0] != '-') and (c04[1:4] != "0.0"):
-        c004[0] = '+'
+        c004[0] = '+'      # Forzamos signo + si es positivo y no es cero
     else:
-        c004[0] = c04[0]
+        c004[0] = c04[0]   # Mantenemos signo original (o espacio)
 
     c004 = "".join(c004)
 
-    # Escribir encabezado de Enero
+    # Escribir cabecera de la tabla (Enero)
+    # Nota: \Minp es presumiblemente una macro LaTeX definida en el documento maestro
     f.write(
-        f" Ene.& 1&           \\\\\n"
+        f" Ene.& 1&          \\\\\n"
         f"     &  &${c004[0]}${c004[1]}\\Minp {c004[3]}\\\\\n"
     )
 
     # -------------------------------------------------------------
-    # Bucle principal del año
+    # 4. Bucle Principal (Día a Día)
     # -------------------------------------------------------------
     for d in range(1, j):
+        # Calcular fecha juliana actual (sumando día 'd' y corrección Delta T)
         dj = fun.DiaJul(1, 1, ano, 0.0) + d + dT
+        
+        # Calcular distancia geocéntrica al Sol
         r = lee.GeoDista(dj, 10)
+        
+        # Calcular corrección al semidiámetro
         valor = fun.Rad2MArc(np.arcsin(rs / r)) - 16
         c4 = f"{valor:4.1f}"
-        if c4[1:4].strip() == "0.0":
-            # Si es ' 0.0' o '-0.0', lo queremos como ' 0.0' (sin signo)
-            c4_list = list(c4)
-            c4_list[0] = ' ' # Eliminar el signo (reemplazar por espacio)
-            c4 = "".join(c4_list) # Volver a convertir a string
 
+        # Limpieza de ceros: evitar "-0.0", preferimos " 0.0"
+        if c4[1:4].strip() == "0.0":
+            c4_list = list(c4)
+            c4_list[0] = ' ' 
+            c4 = "".join(c4_list)
+
+        # DETECCIÓN DE CAMBIO:
+        # Solo escribimos una nueva fila si el valor redondeado ha cambiado 
+        # respecto al anterior (c4 != c04). Esto comprime la tabla.
         if c4 != c04:
+            # Recuperar fecha civil (día, mes) del día anterior (dj - 1)
+            # Se usa dj-1 porque detectamos el cambio hoy, pero el periodo 
+            # válido del valor anterior terminó ayer.
             dia, mes, anno2, hora = fun.DJADia(dj - 1)
 
+            # Actualizar valores de referencia
             c04 = c4
             c004 = list(c4)
 
+            # Re-aplicar lógica de signos
             if (c04[0] != '-') and (c04[1:4] != "0.0"):
                 c004[0] = '+'
             else:
@@ -122,14 +175,21 @@ def SemiDiametroSol():
 
             c004 = "".join(c004)
 
+            # Escribir fila LaTeX: Mes & Día & Valor formateado
             f.write(
                 f" {fun.MesNom(mes)}& {dia}&          \\\\\n"
                 f"     &  &${c004[0]}${c004[1]}\\Minp {c004[3]}\\\\\n"
             )
 
-    # Línea final para diciembre
-    f.write(" Dic.&31&           \\\\\n")
+    # -------------------------------------------------------------
+    # 5. Cierre
+    # -------------------------------------------------------------
+    # Escribir línea final obligatoria (31 de Diciembre)
+    f.write(" Dic.&31&          \\\\\n")
 
     f.close()
-
     print(f"Archivo generado: {filename}")
+
+# --- PUNTO DE ENTRADA ---
+if __name__ == "__main__":
+    SemiDiametroSol()

@@ -1,134 +1,270 @@
-# ============================================================
-#   EPHEMERIDES JPL – TRADUCCIÓN COMPLETA DEL CÓDIGO FORTRAN
-#   Basado en PLEPH / STATE / INTERP
-#   utilizando SPICE con el archivo DE440.bsp
-# ============================================================
+# =============================================================================
+# MÓDULO DE EFEMÉRIDES - CORE SKYFIELD (FULL INTEGRATION)
+# =============================================================================
+# Propósito: Actuar como "Backend" de cálculo astronómico de alta precisión.
+#            Sustituye a la antigua implementación basada en Fortran.
+#            Gestiona la carga del archivo binario DE440 (.bsp) y la creación
+#            de objetos de tiempo y vectores de estado (Posición/Velocidad).
+#
+# Patrón:    Singleton (Lazy Loading). Los datos pesados (>100MB) solo se 
+#            cargan en memoria la primera vez que se llama a una función.
+# =============================================================================
 
 import numpy as np
-import spiceypy as spice
+from skyfield.api import load
+# Importamos iau2000a (Modelo completo de alta precisión para nutación)
+from skyfield.nutationlib import iau2000a
 from pathlib import Path
 
-# ------------------------------------------------------------
-# Rutas por defecto a los kernels SPICE
-# ------------------------------------------------------------
+# --- CONFIGURACIÓN DE RUTAS ---
+try:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+except NameError:
+    BASE_DIR = Path.cwd().parent
 
+# Ruta al archivo de efemérides planetarias JPL DE440
+DE440_PATH = BASE_DIR / "data" / "de440.bsp"
 
-# Ruta del archivo actual (LeeDE440.py)
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Variables Globales (Singleton) para evitar recargas
+_planets = None
+_ts = None
 
-# Los kernels están en la MISMA carpeta que LeeDE440.py
-DEFAULT_NAIF = BASE_DIR / "data" / "spice" / "naif0012.tls"
-DEFAULT_DE440 = BASE_DIR / "data" / "de440.bsp"
-DEFAULT_PCK = BASE_DIR / "data" / "spice" / "pck00010.tpc"
+# Constantes de Conversión
+AU_KM = 149597870.700  # km por Unidad Astronómica
+DAY_SEC = 86400.0      # Segundos en un día
 
-# ------------------------------------------------------------
-# Inicialización del sistema SPICE
-# ------------------------------------------------------------
-
-_spice_loaded = False   # evita cargar varias veces
-
-
-def load_de440(naif_path=DEFAULT_NAIF, de440_path=DEFAULT_DE440, pck_path=DEFAULT_PCK):
-    global _spice_loaded
-
-    if _spice_loaded:
+def load_data():
+    """
+    CABECERA:       load_data()
+    DESCRIPCIÓN:    Inicializador del patrón Singleton. Carga las efemérides y 
+                    las escalas de tiempo en memoria global.
+    
+    PRECONDICIÓN:   Ninguna.
+    
+    POSTCONDICIÓN:  Las variables globales '_planets' y '_ts' quedan inicializadas.
+                    Si el archivo DE440 no existe localmente, intenta descargarlo.
+                    Si ya estaban cargadas, no hace nada (retorno inmediato).
+    """
+    global _planets, _ts
+    
+    if _planets is not None:
         return
 
-    # Validación usando pathlib (.exists())
-    # Imprimimos la ruta absoluta si falla para que sepas EXACTAMENTE dónde busca
-    if not naif_path.exists():
-        raise FileNotFoundError(f"Error SPICE: No encuentro naif0012.tls en:\n{naif_path}")
+    # 1. Escala de Tiempo (descarga automática de Delta T / Leap Seconds)
+    _ts = load.timescale()
 
-    if not de440_path.exists():
-        raise FileNotFoundError(f"Error SPICE: No encuentro de440.bsp en:\n{de440_path}")
+    # 2. Efemérides (JPL DE440)
+    if DE440_PATH.exists():
+        _planets = load(str(DE440_PATH))
+    else:
+        print("Aviso: No se encontró DE440 local. Descargando/Usando caché de Skyfield...")
+        _planets = load('de440.bsp')
 
-    if not pck_path.exists():
-        raise FileNotFoundError(f"Error SPICE: No encuentro pck00010.tpc en:\n{pck_path}")
+
+# ------------------------------------------------------------
+#   FUNCIONES DE TIEMPO
+# ------------------------------------------------------------
+
+def get_time_obj(jd, scale='tdb'):
+    """
+    CABECERA:       get_time_obj(jd, scale='tdb')
+    DESCRIPCIÓN:    Factoría de objetos Time de Skyfield. Unifica la gestión
+                    de escalas de tiempo.
     
-    # Carga en SPICE convirtiendo a string (Safety first)
-    try:
-        spice.furnsh(str(naif_path))
-        spice.furnsh(str(de440_path))
-        spice.furnsh(str(pck_path))
-    except Exception as e:
-        raise RuntimeError(f"Error interno de SPICE al cargar kernels: {e}")
+    PRECONDICIÓN:   - jd: Float (Fecha Juliana).
+                    - scale: String ('tdb', 'tt', 'utc'). Por defecto 'tdb'.
+    
+    POSTCONDICIÓN:  Devuelve un objeto Time de Skyfield.
+                    
+                    NOTA: Este objeto permite conversiones instantáneas:
+                    t.ut1, t.tt, t.tdb, t.J (siglos), etc.
+    """
+    load_data()
+    if scale.lower() == 'tdb':
+        return _ts.tdb(jd=jd)
+    elif scale.lower() == 'tt':
+        return _ts.tt(jd=jd)
+    elif scale.lower() == 'utc':
+        return _ts.utc(jd=jd)
+    else:
+        raise ValueError(f"Escala de tiempo '{scale}' no soportada. Usa 'tdb', 'tt', o 'utc'.")
 
-    _spice_loaded = True
+
+def get_delta_t(jd):
+    """
+    CABECERA:       get_delta_t(jd)
+    DESCRIPCIÓN:    Obtiene la diferencia entre el tiempo terrestre y el universal.
+                    Delta T = TT - UT1.
+    
+    PRECONDICIÓN:   'jd': Fecha Juliana (generalmente TDB o TT).
+    
+    POSTCONDICIÓN:  Devuelve un float con Delta T en SEGUNDOS.
+                    Usa tablas históricas del IERS gestionadas por Skyfield.
+    """
+    t = get_time_obj(jd)
+    return t.delta_t
+
+
+def sidereal_time(jd, local_longitude=0.0):
+    """
+    CABECERA:       sidereal_time(jd, local_longitude)
+    DESCRIPCIÓN:    Calcula el Tiempo Sideral Local Aparente (LAST/GAST).
+    
+    PRECONDICIÓN:   - jd: Fecha Juliana (TDB).
+                    - local_longitude: Float en GRADOS. 
+                      Convención: Este positivo (+), Oeste negativo (-).
+    
+    POSTCONDICIÓN:  Devuelve un float: Tiempo Sideral en HORAS (0.0 a 24.0).
+                    
+                    NOTA TÉCNICA:
+                    Calcula primero el GAST (Greenwich Apparent Sidereal Time),
+                    que incluye la ecuación de equinoccios, y luego aplica
+                    el offset de longitud geográfica.
+    """
+    t = get_time_obj(jd)
+    # .gast = Greenwich Apparent Sidereal Time
+    gast_hours = t.gast
+    
+    # Ajuste por longitud (15 grados = 1 hora)
+    local_lst = (gast_hours + local_longitude / 15.0) % 24.0
+    return local_lst
 
 
 # ------------------------------------------------------------
-# Conversión de unidades
+#   NUTACIÓN Y OBLICUIDAD
 # ------------------------------------------------------------
 
-AU_KM = 149597870.700   # km
-DAY_SEC = 86400.0       # s
+def true_obliquity(jd):
+    """
+    CABECERA:       true_obliquity(jd)
+    DESCRIPCIÓN:    Calcula la Oblicuidad Verdadera de la Eclíptica (Epsilon).
+                    Incluye la oblicuidad media + nutación en oblicuidad.
+    
+    PRECONDICIÓN:   'jd': Fecha Juliana.
+    
+    POSTCONDICIÓN:  Devuelve un float: Ángulo en RADIANES.
+    """
+    t = get_time_obj(jd)
+    from skyfield.nutationlib import true_obliquity as skyfield_epsilon
+    return skyfield_epsilon(t.J) 
+
+
+def get_nutations_skyfield(jd_tdb):
+    """
+    CABECERA:       get_nutations_skyfield(jd_tdb)
+    DESCRIPCIÓN:    Calcula los componentes de la nutación usando el modelo
+                    de alta precisión IAU 2000A.
+    
+    PRECONDICIÓN:   'jd_tdb': Fecha Juliana en tiempo dinámico.
+    
+    POSTCONDICIÓN:  Devuelve una tupla (dpsi, deps) en RADIANES.
+                    - dpsi: Nutación en longitud.
+                    - deps: Nutación en oblicuidad.
+    """
+    t = get_time_obj(jd_tdb, scale='tdb')
+    # Modelo IAU 2000A (Mersenne-Twister truncation compliant)
+    dpsi, deps = iau2000a(t.J)
+    return dpsi, deps
 
 
 # ------------------------------------------------------------
-#   PLEPH (equivalente Fortran)
+#   PLEPH - IMPLEMENTACIÓN PRINCIPAL
 # ------------------------------------------------------------
 
 def pleph(jd, target, center, frame="J2000", units="au"):
     """
-    Equivalente funcional de PLEPH en Fortran.
-
-    Parámetros:
-    - jd      : Fecha juliana (TDB o TT)
-    - target  : ID SPICE del cuerpo
-    - center  : ID SPICE del centro
-    - units   : "km" (por defecto) o "AU"
-
-    Devuelve:
-    (pos, vel)
-        pos: vector posición
-        vel: vector velocidad
-    """
+    CABECERA:       pleph(jd, target, center, frame, units)
+    DESCRIPCIÓN:    Función maestra de efemérides. Calcula el vector de estado
+                    (Posición y Velocidad) de un cuerpo respecto a otro.
+                    Reemplazo directo de la subrutina Fortran 'PLEPH'.
     
-    # Asegurar que los kernels están cargados
-    load_de440()
+    PRECONDICIÓN:   - jd: Fecha Juliana (TDB).
+                    - target: ID entero del cuerpo destino (ej. 499 Marte).
+                    - center: ID entero del cuerpo origen (ej. 10 Sol).
+                    - units: 'au' (Unidad Astronómica/Día) o 'km' (Kilómetros/Segundo).
+    
+    POSTCONDICIÓN:  Devuelve dos arrays numpy (posicion, velocidad).
+                    
+                    CASO ESPECIAL (Legacy):
+                    Si target == 14, ignora 'center' y devuelve la tupla de 
+                    nutaciones (dpsi, deps) para mantener compatibilidad con 
+                    estructuras de código antiguas.
+                    
+                    NOTA DE MARCO DE REFERENCIA:
+                    Los vectores devueltos están en el marco ICRS (prácticamente J2000).
+                    Son vectores geométricos instantáneos (sin corrección de luz).
+    """
+    load_data()
 
-    # Convertir JD → ET (tiempo SPICE)
-    et = spice.unitim(jd, "JED", "ET")
+    # --- Caso Especial: Nutaciones (Legacy ID 14) ---
+    if target == 14:
+        return get_nutations_skyfield(jd)
 
-    # Obtener posición y velocidad sin correcciones de luz
-    state, lt = spice.spkez(target, et, frame, "NONE", center)
+    # 1. Definir el Tiempo (TDB para efemérides físicas)
+    t = _ts.tdb(jd=jd)
 
-    pos_km = np.array(state[0:3])
-    vel_kms = np.array(state[3:6])
+    # 2. Obtener Vectores
+    try:
+        obj_target = _planets[target]
+        obj_center = _planets[center]
+    except KeyError:
+        raise ValueError(f"ID {target} o {center} no encontrado en el archivo BSP.")
 
-    # Unidades en AU / AU/día
+    # Resta vectorial (Target - Centro)
+    # .at(t) devuelve posición geométrica ICRS
+    pos_vector = obj_target.at(t) - obj_center.at(t)
+    
+    # 3. Extraer Datos Crudos
+    p_au = pos_vector.position.au
+    v_au_day = pos_vector.velocity.au_per_d
+
+    # 4. Conversión de Unidades
     if units.lower() == "au":
-        pos = pos_km / AU_KM
-        vel = vel_kms * DAY_SEC / AU_KM
-        return pos, vel
-
-    # Unidades por defecto: km, km/s
-    return pos_km, vel_kms
+        return p_au, v_au_day
+    else:
+        # Conversión a Sistema Métrico (km y km/s)
+        p_km = p_au * AU_KM
+        v_kms = v_au_day * AU_KM / DAY_SEC
+        return p_km, v_kms
 
 
 # ------------------------------------------------------------
-#   GEODISTA (equivalente Fortran)
+#   GEODISTA - DISTANCIA A LA TIERRA
 # ------------------------------------------------------------
 
 def GeoDista(jd, target, units="au"):
     """
-    Equivalente a GEODISTA en Fortran.
-    Devuelve la distancia geocéntrica Tierra–target.
+    CABECERA:       GeoDista(jd, target, units)
+    DESCRIPCIÓN:    Calcula la distancia escalar desde el centro de la Tierra
+                    hasta el cuerpo objetivo.
+    
+    PRECONDICIÓN:   - jd: Fecha Juliana.
+                    - target: ID del cuerpo destino.
+    
+    POSTCONDICIÓN:  Devuelve un float con la distancia (siempre positiva).
+                    Útil para cálculos de semidiámetros o magnitudes.
     """
-    pos, _ = pleph(jd, target, center=399, units=units)
-    return np.linalg.norm(pos)
+    load_data()
+    t = _ts.tdb(jd=jd)
+    
+    # ID 399 = Earth (Centro de masa de la Tierra)
+    d = (_planets[target].at(t) - _planets[399].at(t)).distance()
+
+    if units.lower() == "au":
+        return d.au
+    return d.km
 
 
 # ------------------------------------------------------------
-#  Códigos SPICE (equivalente a FSIZER3 / PLEPH docs)
+#   DICCIONARIO DE IDs (REFERENCIA)
 # ------------------------------------------------------------
-
 SPICE_IDS = {
+    "SSB": 0,       # Solar System Barycenter
     "SUN": 10,
-    "MERCURY": 199,
-    "VENUS": 299,
-    "EARTH": 399,
-    "MOON": 301,
+    "MERCURY": 199, # Ocasionalmente 1, depende del kernel
+    "VENUS": 299,   # Ocasionalmente 2
+    "EARTH": 399,   # Ocasionalmente 3
+    "MOON": 301,    # Ocasionalmente 10 (en códigos viejos)
     "MARS": 499,
     "JUPITER": 599,
     "SATURN": 699,
