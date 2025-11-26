@@ -32,8 +32,8 @@ if ruta_str not in sys.path:
 
 # 3. Importación de módulos propios (Astronómicos y de Utilidades)
 try:
-    from utils import funciones2 as fun      # Conversiones de tiempo y formatos
-    from utils import read_de4402 as lee     # Lectura de efemérides (Skyfield wrapper)
+    from utils import funciones as fun      # Conversiones de tiempo y formatos
+    from utils import read_de440 as lee     # Lectura de efemérides (Skyfield wrapper)
 except ImportError as e:
     raise ImportError(f"Error importando módulos desde '{ruta_base}': {e}")
 
