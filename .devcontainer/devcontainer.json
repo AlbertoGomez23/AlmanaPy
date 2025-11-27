@@ -38,14 +38,10 @@
 				"DavidAnson.vscode-markdownlint",
 				"christian-kohler.path-intellisense",
 				"mathematic.vscode-pdf",
-				"ms-python.vscode-pylance",
 				"ms-python.python",
-				"ms-python.debugpy",
-				"ms-python.vscode-python-envs",
 				"KevinRose.vsc-python-indent",
 				"fortran-lang.linter-gfortran",
 				"tamasfe.even-better-toml",
-				"GitHub.copilot",
 				"GitHub.copilot-chat"
 			],
 			"settings": {
