@@ -16,10 +16,8 @@ services:
       # Evita que la carpeta node_modules o venv local sobrescriba la del contenedor
       # - /app/node_modules 
 
-    # PUERTOS
-    # Mapea el puerto 8000 de tu PC al 8000 del contenedor
-    ports:
-      - "8000:8000"
-
-    # COMANDO (Opcional: para reiniciar si el archivo cambia)
-    # command: python src/app.py
+    # COMANDO
+    # Mantiene el contenedor encendido para desarrollo (sleep infinity)
+    # ya que app.py es un script que termina inmediatamente.
+    command: sleep infinity
+    # Para ejecutar la app: python modern/app.py

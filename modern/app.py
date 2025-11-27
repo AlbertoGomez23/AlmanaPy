@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 import os
-import sys
 import click
-
-# Añadir el directorio src al path para importar módulos internos
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_path = os.path.join(current_dir, 'src')
-sys.path.append(src_path)
 
 @click.command()
 @click.option('--year', default=2025, help='Año para el cálculo del almanaque.')
