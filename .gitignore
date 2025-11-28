@@ -1,30 +1,84 @@
-# macOS
+# --- OS ---
 .DS_Store
+Thumbs.db
 
-# --- Ignorar dependencias ---
-# Nunca subas 'node_modules', 'venv', o 'vendor'.
-# Razón: Las librerías de Windows no funcionan en Linux y viceversa.
-node_modules/
+# --- Python ---
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+manifest
+
+# --- Virtual Environments ---
 venv/
+.venv/
+env/
+ENV/
+
+# --- Testing & Quality ---
 .pytest_cache/
-# Si usas PHP/Composer
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# --- Jupyter ---
+.ipynb_checkpoints
+
+# --- Dependencies ---
+node_modules/
 vendor/
 
-# --- Ignorar variables de entorno ---
-# Cada desarrollador puede tener claves distintas.
+# --- Environment Variables ---
 .env
+.env.local
+.env.*.local
+.envrc
 
-# VS Code
+# --- Logs & Temp ---
+*.log
+*.tmp
+*.swp
+*.bak
+*.~*
+
+# --- IDEs ---
+.idea/
 .vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+*.project
+*.classpath
+*.settings/
 
-# Archivos de compilación C++
-*.o
-*.out
-*.exe
+# --- Project Specific ---
+# Generated data (anchored to root)
+/data/
 
-# Python bytecode
-*.pyc
-
-# --- Ignorar archivos de sistema ---
-Thumbs.db
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tgz
+*.bz2
+*.xz
