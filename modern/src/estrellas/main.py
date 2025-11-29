@@ -227,24 +227,28 @@ def main():
     # ============================================================
     # LÓGICA DE SELECCIÓN DE DELTA T (Modificación Solicitada)
     # ============================================================
-    print("\n--- CONFIGURACIÓN DELTA T (TT - UT) ---")
-    print("1. Automático (Archivos Skyfield/IERS)")
-    print("2. Manual (Introducir valor constante)")
-    seleccion_dt = input("Seleccione (1/2): ")
-    
-    if seleccion_dt.strip() == '2':
-        try:
-            val_dt = float(input(" Introduzca valor de Delta T (segundos): "))
-            aplicar_delta_t_manual(val_dt)
-        except ValueError:
-            print(" Valor no válido. Usando automático por defecto.")
+    seleccionado = False
+    while not seleccionado: 
+        print("\n--- CONFIGURACIÓN DELTA T (TT - UT) ---")
+        print("1. Automático (Archivos Skyfield/IERS)")
+        print("2. Manual (Introducir valor constante)")
+        seleccion_dt = input("Seleccione (1/2): ")
+        
+        if seleccion_dt == '2':
+            try:
+                val_dt = float(input(" Introduzca valor de Delta T (segundos): "))
+                aplicar_delta_t_manual(val_dt)
+                seleccionado = True
+            except ValueError:
+                print(" Valor no válido. Usando automático por defecto.")
+                aplicar_delta_t_manual(None)
+        elif seleccion_dt == '1':
+            # Solo para mostrar información, calculamos el Delta T actual automático
+            from utils.read_de440 import _ts
+            t_info = _ts.utc(ano, 1, 1)
+            print(f" Usando modo Automático. (Valor aprox. para 1-Ene-{ano}: {t_info.delta_t:.2f} s)")
             aplicar_delta_t_manual(None)
-    else:
-        # Solo para mostrar información, calculamos el Delta T actual automático
-        from utils.read_de440 import _ts
-        t_info = _ts.utc(ano, 1, 1)
-        print(f" Usando modo Automático. (Valor aprox. para 1-Ene-{ano}: {t_info.delta_t:.2f} s)")
-        aplicar_delta_t_manual(None)
+            seleccionado = True
 
     # ============================================================
 
