@@ -85,6 +85,8 @@ def get_time_obj(jd, scale='tdb'):
         return _ts.tt(jd=jd)
     elif scale.lower() == 'utc':
         return _ts.utc(jd=jd)
+    elif scale.lower() == 'ut1':
+        return _ts.ut1(jd=jd)
     else:
         raise ValueError(f"Escala de tiempo '{scale}' no soportada. Usa 'tdb', 'tt', o 'utc'.")
 
