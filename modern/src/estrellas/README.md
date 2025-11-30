@@ -10,7 +10,7 @@ El sistema migra la lógica original escrita en Fortran 77 a Python moderno, sus
 
 | Característica | Legacy (Fortran) | Modern (Python) |
 | :--- | :--- | :--- |
-| **Punto de Entrada** | `prueba.f` | `main.py` |
+| **Punto de Entrada** | `prueba.f` | `main_estrella.py` |
 | **Cálculo Astronómico** | `ReduEstr.f` (Manual) | `calculos.py` (Skyfield) |
 | **Precisión** | IAU 1976/1980 | **IAU 2000A/2006 (DE440)** |
 | **Manejo del Tiempo** | Interpolación manual | IERS (Automático) + Soporte Manual |
@@ -45,4 +45,4 @@ El módulo se compone de tres scripts principales ubicados en `src/estrellas/`:
 Desde la terminal, navega a la carpeta `modern/src/estrellas/` y ejecuta:
 
 ```bash
-python main.py
+python main_estrella.py

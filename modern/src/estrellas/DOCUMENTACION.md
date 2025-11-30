@@ -41,7 +41,7 @@ El módulo requiere los siguientes catálogos de texto plano en el directorio `s
 
 El sistema ahora organiza la salida automáticamente en una estructura de directorios externa al código fuente.
 
-**Ruta de salida:** `../data/[AÑO]/`
+**Ruta de salida:** `../data/almanaque_nautico/[AÑO]/`
 
 | Archivo Generado | Contenido | Páginas del Almanaque |
 | :--- | :--- | :--- |
@@ -74,7 +74,7 @@ Contiene funciones portadas estrictamente del Fortran original para garantizar q
 * **`SIGRMI`**: Conversión de radianes a Grados/Minutos con lógica de desbordamiento visual.
 * **`UNANGGRA`**: Unificación del grado base para columnas mensuales, evitando saltos visuales por nutación (ej. $29^\circ 60.1'$ en lugar de $30^\circ 00.1'$ si el resto de la columna es 29).
 
-### C. `main.py` (Controlador)
+### C. `main_estrella.py` (Controlador)
 Sustituye a `prueba.f`.
 
 * Gestiona la interfaz de línea de comandos (CLI).
@@ -88,4 +88,4 @@ El programa se ejecuta desde la terminal en el entorno Python configurado.
 
 **Comando:**
 ```bash
-python main.py
+python main_estrella.py
