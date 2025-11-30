@@ -201,12 +201,21 @@ def main():
     # =========================================================================
     # 2. INTERACCIÓN Y CÁLCULO
     # =========================================================================
-    print("*" * 100)
-    print("PARA PAGINAS 380 Y 381 ALMANAQUE INTRODUCIR (1) Y DIA 1")
-    print("PARA PAGINAS 376-379 ALMANAQUE INTRODUCIR (2) Y DIA 15")
-    modo = 0
-    while modo != 1 and modo != 2: 
-        modo = int(input("Introduzca 1 / 2: "))
+    print("*" * 70)
+    print("PARA PAGINAS 380 Y 381 ALMANAQUE INTRODUCIR (1), DIA 1 POR DEFECTO")
+    print("PARA PAGINAS 376-379 ALMANAQUE INTRODUCIR (2), DIA 15 POR DEFECTO")
+    
+    while True: 
+            try: 
+                modo = input("Introduzca 1 / 2: ")                
+                modo_int = int(modo)
+                if modo_int == 1 or modo_int == 2:                                
+                    modo = modo_int
+                    break
+                else: 
+                    print(f" [!] El modo debe ser 1 o 2. Introdujo: {modo_int}")
+            except ValueError:
+                print("[! Error: Debe introducir un número válido]")
 
     if modo == 1: 
         dia_mes = 1
@@ -220,9 +229,17 @@ def main():
     catalogo = cargar_catalogo(ruta_cat)
     num_estrellas = 50 if modo == 1 else 99
     
-    ano = 0
-    while ano < 1960 or ano > 2200: 
-        ano = int(input("Introduzca año (XXXX): "))
+    while True: 
+        try: 
+            ano = input("Introduzca año (XXXX): ")                
+            ano_int = int(ano)
+            if 1550 <= ano_int <= 2650:
+                ano = ano_int
+                break
+            else: 
+                print(f" [!] El año debe estar entre 1550 y 2650. Introdujo: {ano_int}")
+        except ValueError:
+            print("[! Error: Debe introducir un número válido]") 
 
     # ============================================================
     # LÓGICA DE SELECCIÓN DE DELTA T (Modificación Solicitada)
@@ -452,7 +469,8 @@ def main():
                     break
             
             if as_index >= 0 and as_index + 2 < len(parts):
-                grados = parts[as_index + 2].replace('º', '')
+                grados_raw = parts[as_index + 2].replace('º', '')
+                grados = f"{int(grados_raw):3d}"
                 minutos = parts[as_index + 3 : as_index + 15] 
                 if len(minutos) < 12: minutos += ['0.0'] * (12 - len(minutos))
                 
@@ -494,16 +512,19 @@ def main():
                     break
             
             if as_index >= 0 and as_index + 2 < len(parts):
-                grados = parts[as_index + 2].replace('º', '')
+                grados_raw = parts[as_index + 2].replace('º', '')
+                grados = f"{int(grados_raw):3d}"
                 minutos = parts[as_index + 3:as_index + 15]
                 if len(minutos) < 12: minutos += ['0.0'] * (12 - len(minutos))
                 
+                """
                 # Format grados spacing like original
                 if len(grados) == 2: grados_fmt = f" {grados}"
                 elif len(grados) == 1: grados_fmt = f"  {grados}"
                 else: grados_fmt = grados
+                """
                 
-                line_378 = (f"{l[n]:70s}{grados_fmt} & "
+                line_378 = (f"{l[n]:70s}{grados} & "
                         f"{minutos[0]:>5s} & {minutos[1]:>5s} & {minutos[2]:>5s} & "
                         f"{minutos[3]:>5s} & {minutos[4]:>5s} & {minutos[5]:>5s} & "
                         f"{minutos[6]:>5s} & {minutos[7]:>5s} & {minutos[8]:>5s} & "
@@ -540,15 +561,18 @@ def main():
                     break
             
             if as_index >= 0 and as_index + 2 < len(parts_y):
-                grados = parts_y[as_index + 2].replace('º', '')
+                grados_raw = parts_y[as_index + 2].replace('º', '')
+                grados = f"{int(grados_raw):3d}"
                 minutos = parts_y[as_index + 3:as_index + 15]
                 if len(minutos) < 12: minutos += ['0.0'] * (12 - len(minutos))
                 
+                """
                 if len(grados) == 2: grados_fmt = f" {grados}"
                 elif len(grados) == 1: grados_fmt = f"  {grados}"
                 else: grados_fmt = grados
+                """
                 
-                line_cartas = (f"{lll[k]:70s}{grados_fmt} & "
+                line_cartas = (f"{lll[k]:70s}{grados} & "
                             f"{minutos[0]:>5s} & {minutos[1]:>5s} & {minutos[2]:>5s} & "
                             f"{minutos[3]:>5s} & {minutos[4]:>5s} & {minutos[5]:>5s} & "
                             f"{minutos[6]:>5s} & {minutos[7]:>5s} & {minutos[8]:>5s} & "
