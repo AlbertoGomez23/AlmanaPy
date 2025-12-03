@@ -41,7 +41,7 @@ def obtener_cuerpo(id_cuerpo):
     if id_cuerpo == 3:  return eph['earth']
     if id_cuerpo == 1:  return eph['mercury']
     if id_cuerpo == 2:  return eph['venus']
-    if id_cuerpo == 4:  return eph['mars']
+    if id_cuerpo == 4:  return eph['mars barycenter']
     if id_cuerpo == 5:  return eph['jupiter barycenter']
     if id_cuerpo == 6:  return eph['saturn barycenter']
     # Fallback genérico para IDs JPL (ej. 199, 299)
