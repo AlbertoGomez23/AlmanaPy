@@ -38,7 +38,8 @@ R2GR = 180.0 / np.pi
 # Refracción estándar en el horizonte (34 minutos de arco)
 REFRACCION_HORIZONTE = 34.0 / 60.0  # grados
 R_MOON_KM = 1737.4                  # Radio medio de la Luna en km
-
+AU_KM = 149597870.7
+R_EARTH_KM = 6378.137
 # True = fenómeno de subida (orto), False = bajada (ocaso)
 EVENTO_SUBIDA = {
     "ort": True,
@@ -59,7 +60,7 @@ def format_hms(hours_decimal):
 
 
 # =============================================================================
-# ORTO / OCASO LUNAR
+# ORTO / OCASO LUNAR (tu función original, sólo hora)
 # =============================================================================
 def fenoluna(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
     """
@@ -100,29 +101,28 @@ def fenoluna(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
     busca_subida = EVENTO_SUBIDA[fen]
 
     def funcion_altitud_lunar(t):
-        # Altitud geométrica (sin refracción) de la Luna
+       # Altitud geométrica (sin refracción) de la Luna
         # pressure_mbar=0 → sin refracción atmosférica
-        alt_geo, az_geo, dist_geo = observador.at(t).observe(luna).apparent().altaz(
+        alt_geo, az_geo, dist_topo = observador.at(t).observe(luna).apparent().altaz(
             temperature_C=0.0, pressure_mbar=0.0
         )
 
         # Distancia Luna–observador en km (array NumPy)
-        dist_km = dist_geo.km
+        d_topo_km = dist_topo.km
 
         # Semidiámetro angular (rad) = asin(R_moon / distancia)
-        ratio = np.minimum(1.0, R_MOON_KM / dist_km)
+        ratio = np.minimum(1.0, R_MOON_KM / d_topo_km)
         sd_rad = np.arcsin(ratio)
         sd_deg = sd_rad * R2GR
 
-        # Horizonte geométrico del CENTRO:
+        # Umbral del CENTRO:
         # h_centro > -(refracción + semidiámetro)
         altitud_horizonte_centro = -(REFRACCION_HORIZONTE + sd_deg)
 
         # Condición booleana: centro por encima del horizonte corregido
         return alt_geo.degrees > altitud_horizonte_centro
-
     # Paso de ~6 min (Luna se mueve rápido)
-    funcion_altitud_lunar.step_days = 1.0 / 240.0
+    funcion_altitud_lunar.step_days = 1.0 / 2880.0
 
     # 4. Buscar cambios de estado (debajo↔encima del horizonte)
     times, values = find_discrete(t0, t1, funcion_altitud_lunar)
@@ -155,18 +155,53 @@ def fenoluna(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
 
 
 # =============================================================================
+# RETARDO DIARIO LUNAR R (columna R del Almanaque)
+# =============================================================================
+def retardo_lunar_R(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
+    """
+    Retardo diario lunar R (minutos) según la definición del Almanaque:
+
+        HmI(x+1) = HmI(x) + R
+
+    Es decir, R = H_mañana - H_hoy, en minutos.
+    """
+    fen = fenomeno.lower()
+    if fen not in ("ort", "oca"):
+        raise ValueError("Fenómeno no válido en retardo_lunar_R: usa 'ort' u 'oca'.")
+
+    # Hora del fenómeno HOY y MAÑANA (en horas decimales)
+    h_hoy = fenoluna(dj_ut, latitud_grad, fen, longitud_grad)
+    h_maniana = fenoluna(dj_ut + 1.0, latitud_grad, fen, longitud_grad)
+
+    # Si falta alguno de los fenómenos, no hay R
+    if h_hoy == 9999.0 or h_maniana == 9999.0:
+        return None
+
+    # Diferencia en horas, normalizada a 0–24 h
+    delta_h = (h_maniana - h_hoy) % 24.0
+
+    # Pasar a minutos y redondear al minuto más cercano
+    # (usamos floor(x+0.5) para evitar rarezas de round())
+    delta_min = int(math.floor(delta_h * 60.0 + 0.5))
+
+    return delta_min
+
+
+
+
+
+# =============================================================================
 # MAIN DE PRUEBA
 # =============================================================================
 if __name__ == "__main__":
     print(">>> Ejecutando ortoocasoluna.py (__main__)")
 
-    # EJEMPLO: el que estás mirando en la captura
-    # SÁBADO 14 DE ABRIL DE 2012, LATITUD 54º N, LONGITUD 0º
+    # EJEMPLO: JUEVES 6 DE SEPTIEMBRE DE 2012
     YEAR = 2012
     MONTH = 9
     DAY = 6
-    LAT_TEST = 50.0
-    LON_TEST = 0.0
+    LAT_TEST = 58.0   # cambia aquí la latitud (50, 54, etc.) para comparar con el AN
+    LON_TEST = 0.0    # Greenwich
 
     ts = load.timescale()
     t_start_utc = ts.utc(YEAR, MONTH, DAY, 0, 0, 0)
@@ -179,13 +214,23 @@ if __name__ == "__main__":
     print("-" * 40)
 
     try:
+        # ORTO
         hora_orto = fenoluna(DJ_UT, LAT_TEST, "ort", LON_TEST)
+        R_orto = retardo_lunar_R(DJ_UT, LAT_TEST, "ort", LON_TEST)
+
         print("Orto  (rise):", format_hms(hora_orto),
               f" ({hora_orto:.6f} h)" if hora_orto != 9999.0 else "")
+        if R_orto is not None:
+            print(f"    R (retardo diario): {R_orto:d} min")
 
+        # OCASO
         hora_ocaso = fenoluna(DJ_UT, LAT_TEST, "oca", LON_TEST)
+        R_ocaso = retardo_lunar_R(DJ_UT, LAT_TEST, "oca", LON_TEST)
+
         print("Ocaso (set): ", format_hms(hora_ocaso),
               f" ({hora_ocaso:.6f} h)" if hora_ocaso != 9999.0 else "")
+        if R_ocaso is not None:
+            print(f"    R (retardo diario): {R_ocaso:d} min")
 
     except ImportError as e:
         print("\nFALLO CRÍTICO: Error de importación.")
