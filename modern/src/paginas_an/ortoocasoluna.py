@@ -1,213 +1,194 @@
-import numpy as np
+import sys
 import math
-from skyfield.api import load, Topos, load_file
+import numpy as np
 import warnings
+from pathlib import Path
 
-# Suprimir advertencias de Skyfield sobre archivos antiguos.
+from skyfield.api import wgs84, load
+from skyfield.searchlib import find_discrete
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# --- CONSTANTES ---
-PI = np.pi
+# =============================================================================
+# CONFIGURACIÓN DE RUTAS E IMPORTACIONES
+# =============================================================================
+try:
+    # .../modern/src
+    ruta_base = Path(__file__).resolve().parent.parent
+except NameError:
+    ruta_base = Path.cwd().parent
 
-CONSTANTS = {
-    'gr2r': PI / 180.0,
-    'dpi': 2.0 * PI,
-    'j2000': 2451545.0,
-    'di2s': 86400.0
+ruta_str = str(ruta_base)
+if ruta_str not in sys.path:
+    sys.path.append(ruta_str)
+    print(f"Añadido al path: {ruta_str}")
+
+try:
+    from utils import read_de440 as lee
+    from utils import coordena
+except ImportError as e:
+    raise ImportError(f"Error importando módulos desde '{ruta_base}': {e}")
+
+# =============================================================================
+# CONSTANTES
+# =============================================================================
+GR2R = np.pi / 180.0
+R2GR = 180.0 / np.pi
+
+# Refracción estándar en el horizonte (34 minutos de arco)
+REFRACCION_HORIZONTE = 34.0 / 60.0  # grados
+R_MOON_KM = 1737.4                  # Radio medio de la Luna en km
+
+# True = fenómeno de subida (orto), False = bajada (ocaso)
+EVENTO_SUBIDA = {
+    "ort": True,
+    "oca": False,
 }
 
-def TDBTDT(tt):
-    g_deg = 357.53 + (tt - CONSTANTS['j2000']) * 0.98560028
-    g_rad = math.radians(g_deg)
-    correccion_seg = 0.001658 * math.sin(g_rad) + 0.000014 * math.sin(2.0 * g_rad)
-    correccion_dias = correccion_seg / CONSTANTS['di2s']
-    return tt + correccion_dias
+# =============================================================================
+# AUXILIARES
+# =============================================================================
+def format_hms(hours_decimal):
+    """Convierte horas decimales a HH:MM:SS. 9999.0 → 'n/a'."""
+    if hours_decimal is None or hours_decimal == 9999.0:
+        return "n/a"
+    h = int(hours_decimal) % 24
+    m = int((hours_decimal - int(hours_decimal)) * 60)
+    s = int((((hours_decimal - int(hours_decimal)) * 60) - m) * 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
-def TOCENT(tt):
-    t_tdb_jd = TDBTDT(tt)
-    return (t_tdb_jd - CONSTANTS['j2000']) / 36525.0
 
-def DISTCE(fi, de0, ha):
-    cos_a0 = np.sin(fi) * np.sin(de0) + np.cos(fi) * np.cos(de0) * np.cos(ha)
-    cos_a0 = np.clip(cos_a0, -1.0, 1.0)
-    return np.arccos(cos_a0)
-
-# MANTENIDA POR COMPATIBILIDAD; no usada en la lógica altaz
-def GET_NUTATION_CORRECTION(t_obj):
-    return 0.0
-
-def ITERA(t0, dj, fi, target_alt_deg, ts, moon, observer):
+# =============================================================================
+# ORTO / OCASO LUNAR
+# =============================================================================
+def fenoluna(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
     """
-    Refinamiento por interpolación lineal sobre altitudes (grados).
-    Devuelve horas UT relativas al día dj.
+    Calcula orto/ocaso de la Luna para un día y lugar dados.
+
+    Parámetros
+    ----------
+    dj_ut : float
+        Día Juliano UT de la medianoche del día (ts.utc(Y,M,D,0).ut1).
+    latitud_grad : float
+        Latitud geográfica (grados, Norte positivo).
+    fenomeno : str
+        'ort' → orto; 'oca' → ocaso.
+    longitud_grad : float
+        Longitud geográfica (grados, Este positivo; Oeste negativo).
+
+    Retorno
+    -------
+    float
+        Hora en UT (0–24). Si no hay fenómeno ese día → 9999.0.
     """
-    eps = 0.2 / 60.0 / 24.0  # 0.2 minutos en días
-    iter_count = 0
-    si = True
+    fen = fenomeno.lower()
+    if fen not in EVENTO_SUBIDA:
+        raise ValueError("Fenómeno lunar no reconocido. Usa 'ort' u 'oca'.")
 
-    u0 = dj + t0
-    u1 = u0 - 1.0 / 240.0  # 0.25 minutos antes (1/240 día)
+    # 1. Intervalo temporal de búsqueda (48 h alrededor del día)
+    t0 = lee.get_time_obj(dj_ut - 0.5, scale="ut1")  # 12 h antes
+    t1 = lee.get_time_obj(dj_ut + 1.5, scale="ut1")  # 36 h después
 
-    # inicializa a0
-    t_u0 = ts.ut1(jd=u0)
-    ast0 = observer.at(t_u0).observe(moon).apparent()
-    alt0, az0, dist0 = ast0.altaz()
-    a0 = alt0.degrees
+    # 2. Observador y cuerpos
+    tierra = coordena.obtener_cuerpo(399)  # Tierra
+    luna = coordena.obtener_cuerpo(301)    # Luna
 
-    while si:
-        t_u1 = ts.ut1(jd=u1)
-        ast1 = observer.at(t_u1).observe(moon).apparent()
-        alt1, az1, dist1 = ast1.altaz()
-        a1 = alt1.degrees
+    posicion_topos = wgs84.latlon(latitud_grad, longitud_grad)
+    observador = tierra + posicion_topos
 
-        # interpolación lineal para encontrar tiempo donde alt == target_alt_deg
-        try:
-            u2 = u0 + (u1 - u0) * (target_alt_deg - a0) / (a1 - a0)
-        except ZeroDivisionError:
-            u2 = u1
+    # 3. Función de altitud dinámica
+    busca_subida = EVENTO_SUBIDA[fen]
 
-        u0, u1 = u1, u2
-        a0 = a1
+    def funcion_altitud_lunar(t):
+        # Altitud geométrica (sin refracción) de la Luna
+        # pressure_mbar=0 → sin refracción atmosférica
+        alt_geo, az_geo, dist_geo = observador.at(t).observe(luna).apparent().altaz(
+            temperature_C=0.0, pressure_mbar=0.0
+        )
 
-        if abs(u1 - u0) < eps:
-            si = False
-        iter_count += 1
-        if iter_count > 100:
-            warnings.warn(f"ADVERTENCIA: ITERA no converge para el día juliano {dj}")
-            si = False
+        # Distancia Luna–observador en km (array NumPy)
+        dist_km = dist_geo.km
 
-    return (u1 - dj) * 24.0
+        # Semidiámetro angular (rad) = asin(R_moon / distancia)
+        ratio = np.minimum(1.0, R_MOON_KM / dist_km)
+        sd_rad = np.arcsin(ratio)
+        sd_deg = sd_rad * R2GR
 
-def BUSCA(t0, st, dj, fi, sgn, target_alt_deg, ts, moon, observer):
-    """
-    Busca cambio de signo en la diferencia (alt - target_alt_deg) * sgn
-    Modifica t0[0] in-place. Si no encuentra, deja 9999.0.
-    """
-    # inicialización
-    t_cur = dj + t0[0]
-    t_u0 = ts.ut1(jd=t_cur)
-    ast0 = observer.at(t_u0).observe(moon).apparent()
-    alt0, az0, dist0 = ast0.altaz()
-    a0 = alt0.degrees
-    dif0 = sgn * (a0 - target_alt_deg)
+        # Horizonte geométrico del CENTRO:
+        # h_centro > -(refracción + semidiámetro)
+        altitud_horizonte_centro = -(REFRACCION_HORIZONTE + sd_deg)
 
-    si = True
-    while si:
-        t0[0] = t0[0] + st
-        if t0[0] > 1.5:
-            # fuera de rango: no encontrado
-            t0[0] = 9999.0
-            break
+        # Condición booleana: centro por encima del horizonte corregido
+        return alt_geo.degrees > altitud_horizonte_centro
 
-        t_u1 = ts.ut1(jd=dj + t0[0])
-        ast1 = observer.at(t_u1).observe(moon).apparent()
-        alt1, az1, dist1 = ast1.altaz()
-        a1 = alt1.degrees
-        dif1 = sgn * (a1 - target_alt_deg)
+    # Paso de ~6 min (Luna se mueve rápido)
+    funcion_altitud_lunar.step_days = 1.0 / 240.0
 
-        if (dif1 <= 0.0) and (dif0 >= 0.0):
-            si = False
-        else:
-            dif0 = dif1
+    # 4. Buscar cambios de estado (debajo↔encima del horizonte)
+    times, values = find_discrete(t0, t1, funcion_altitud_lunar)
 
-    return
+    # Medianoche UT del día de cálculo
+    t_medianoche_ut = lee.get_time_obj(dj_ut, scale="ut1")
 
-def FENOLUN(dj, fi, fen, ts, moon, observer):
-    """
-    CABECERA:       FENOLUN(dj, fi, fen, ts, moon, observer)
-    DESCRIPCIÓN:    Calcula hora UT (horas) del orto ('ort') o ocaso ('oca') de la Luna.
-    PRECONDICIÓN:   - dj: día juliano de la medianoche UT.
-                    - fi: latitud en radianes.
-                    - fen: 'ort' o 'oca'.
-    POSTCONDICIÓN:  Devuelve horas UT (float) relativas al dj. 9999.0 si no encontrado.
-    """
-    # Altura objetivo: centro de la Luna cuando aparece/desaparece considerando refracción (~ -34')
-    target_alt_deg = -34.0 / 60.0  # grados
+    hora_encontrada = 9999.0
 
-    if fen == 'ort':
-        sgn = -1.0
-    elif fen == 'oca':
-        sgn = 1.0
-    else:
-        raise ValueError("Fenómeno debe ser 'ort' o 'oca'")
+    for t, is_above in zip(times, values):
+        fraccion_dia_ut = t.ut1 - t_medianoche_ut.ut1
+        hora = fraccion_dia_ut * 24.0  # puede ser <0 o >24
 
-    ye = True
-    salto = 0.0
-    t0_list = [0.0]
+        if busca_subida and is_above:
+            # Orto: pasa a estar por encima del horizonte
+            hora_encontrada = hora
+            if hora_encontrada > -0.5 / 24.0:
+                break
 
-    while ye:
-        st = 0.5 / 24.0  # paso de 30 minutos
-        t0_list[0] = salto - st
-        BUSCA(t0_list, st, dj, fi, sgn, target_alt_deg, ts, moon, observer)
-        t0 = t0_list[0]
+        elif (not busca_subida) and (not is_above):
+            # Ocaso: pasa a estar por debajo del horizonte
+            hora_encontrada = hora
+            if hora_encontrada > -0.5 / 24.0:
+                break
 
-        if t0 == 9999.0:
-            # búsqueda fina
-            st = 0.4 / 60.0 / 24.0
-            t0_list[0] = salto - st
-            BUSCA(t0_list, st, dj, fi, sgn, target_alt_deg, ts, moon, observer)
-            t0 = t0_list[0]
-            ye = False
-            fenolun_result = t0
-        else:
-            fenolun_result = ITERA(t0, dj, fi, target_alt_deg, ts, moon, observer)
-            if fenolun_result <= -8.333333333333E-03:
-                salto = 22.0 / 24.0
-            else:
-                ye = False
+    # 5. Normalizar a 0–24 h
+    if hora_encontrada != 9999.0:
+        return hora_encontrada % 24.0
+    return hora_encontrada
 
-    return fenolun_result
 
-if __name__ == '__main__':
-    print("--- Inicializando Skyfield y efemérides (de440) ---")
-    try:
-        eph = load('de440.bsp')
-    except Exception:
-        try:
-            eph = load_file('de440.bsp')
-        except Exception:
-            print("ERROR: No se pudo cargar 'de440.bsp'. Coloque el BSP en el directorio actual.")
-            raise
+# =============================================================================
+# MAIN DE PRUEBA
+# =============================================================================
+if __name__ == "__main__":
+    print(">>> Ejecutando ortoocasoluna.py (__main__)")
+
+    # EJEMPLO: el que estás mirando en la captura
+    # SÁBADO 14 DE ABRIL DE 2012, LATITUD 54º N, LONGITUD 0º
+    YEAR = 2012
+    MONTH = 9
+    DAY = 6
+    LAT_TEST = 50.0
+    LON_TEST = 0.0
 
     ts = load.timescale()
-    earth = eph['earth']
-    moon = eph['moon']
+    t_start_utc = ts.utc(YEAR, MONTH, DAY, 0, 0, 0)
+    DJ_UT = t_start_utc.ut1  # Día juliano UT
 
-    # Ejemplo: 2012-01-01 UT midnight
-    dj = 2456028.5
-    latitud_deg = 58.0
-    latitud_rad = np.deg2rad(latitud_deg)
+    print(f"\n--- Resultado de la prueba fenoluna ---")
+    print(f"Fecha:   {YEAR}-{MONTH:02d}-{DAY:02d}")
+    print(f"Latitud: {LAT_TEST}°")
+    print(f"Longitud:{LON_TEST}°")
+    print("-" * 40)
 
-    observer = earth + Topos(latitude_degrees=latitud_deg, longitude_degrees=0.0)
-
-    print(f"Latitud: {latitud_deg}°, Día Juliano: {dj}")
-
-    print("\n--- Orto Lunar (ort) ---")
     try:
-        hora_orto_horas = FENOLUN(dj, latitud_rad, 'ort', ts, moon, observer)
-        if hora_orto_horas == 9999.0:
-            print("Resultado: Fenómeno no encontrado para este día.")
-        else:
-            horas = int(hora_orto_horas) % 24
-            minutos_decimal = (hora_orto_horas - int(hora_orto_horas)) * 60
-            minutos = int(minutos_decimal)
-            segundos = int((minutos_decimal - minutos) * 60)
-            print(f"Hora decimal UT: {hora_orto_horas:.4f}")
-            print(f"Hora UT (HH:MM:SS): {horas:02d}:{minutos:02d}:{segundos:02d} UT")
-    except Exception as e:
-        print(f"Error: {e}")
+        hora_orto = fenoluna(DJ_UT, LAT_TEST, "ort", LON_TEST)
+        print("Orto  (rise):", format_hms(hora_orto),
+              f" ({hora_orto:.6f} h)" if hora_orto != 9999.0 else "")
 
-    print("\n--- Ocaso Lunar (oca) ---")
-    try:
-        hora_ocaso_horas = FENOLUN(dj, latitud_rad, 'oca', ts, moon, observer)
-        if hora_ocaso_horas == 9999.0:
-            print("Resultado: Fenómeno no encontrado para este día.")
-        else:
-            horas = int(hora_ocaso_horas) % 24
-            minutos_decimal = (hora_ocaso_horas - int(hora_ocaso_horas)) * 60
-            minutos = int(minutos_decimal)
-            segundos = int((minutos_decimal - minutos) * 60)
-            print(f"Hora decimal UT: {hora_ocaso_horas:.4f}")
-            print(f"Hora UT (HH:MM:SS): {horas:02d}:{minutos:02d}:{segundos:02d} UT")
+        hora_ocaso = fenoluna(DJ_UT, LAT_TEST, "oca", LON_TEST)
+        print("Ocaso (set): ", format_hms(hora_ocaso),
+              f" ({hora_ocaso:.6f} h)" if hora_ocaso != 9999.0 else "")
+
+    except ImportError as e:
+        print("\nFALLO CRÍTICO: Error de importación.")
+        print(f"Detalle: {e}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error inesperado durante el cálculo: {e}")
