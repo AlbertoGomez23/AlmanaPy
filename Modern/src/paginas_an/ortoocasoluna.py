@@ -174,8 +174,8 @@ if __name__ == '__main__':
     moon = eph['moon']
 
     # Ejemplo: 2012-01-01 UT midnight
-    dj = 2455931.5
-    latitud_deg = 10.0
+    dj = 2456028.5
+    latitud_deg = 58.0
     latitud_rad = np.deg2rad(latitud_deg)
 
     observer = earth + Topos(latitude_degrees=latitud_deg, longitude_degrees=0.0)

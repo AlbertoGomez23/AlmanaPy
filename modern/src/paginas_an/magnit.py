@@ -234,3 +234,4 @@ def magnit(jd):
 if __name__ == "__main__":
     #Ejemplo de llamada a la función magnit
     magnit(2461079.5) 
+

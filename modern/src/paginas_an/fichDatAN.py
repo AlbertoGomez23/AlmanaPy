@@ -197,4 +197,3 @@ def generarFichero():
 
     print(f"\nProceso completado.\n")
     print(f"Tiempo en minutos = {tiempoTotal / 60.0:.4f}")
-

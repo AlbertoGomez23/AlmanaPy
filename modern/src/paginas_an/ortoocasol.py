@@ -173,5 +173,3 @@ def fenosol(jd, latitud_grad, fenomeno, longitud_grad=0.0):
 if __name__ == "__main__":
 #Ejemplo de llamada a fenosol para el 1 de enero de 2012 en la latitud 60º N y para el principio del crepúsculo naútico (pcn)
     fenosol(2455927.50, 60.0, 'pcn')
-
-        
