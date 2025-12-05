@@ -31,6 +31,7 @@ if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
 
 from utils.funciones import DiaJul
+from fase_luna.faseLuna import FasesDeLaLunaLatex
 
 """""
 Cabecera: IDIAAN(dia: int, mes: int, anio: int) -> int
@@ -101,8 +102,8 @@ def generarFichero():
                 print("Error: Año y dt deben ser números enteros.\n")
                 return
 
-            #llamamos a la función principal de FaseLuna
-            #FasesDeLaLUNA(anio, dt)
+            #calculamos el .dat de fases de la luna
+            FasesDeLaLunaLatex(anio, dt)
 
             #preparamos el fichero final
             canio = f"{anio:04d}"   #ponemos el año en formato de 4 dígitos
@@ -156,8 +157,8 @@ def generarFichero():
                 print("Error: formato de fecha o dt incorrecto")
                 return
 
-            #llamamos a faseLuna
-            FasesDeLaLUNA(anio, dt)
+            #calculamos el .dat de fases de la luna
+            FasesDeLaLunaLatex(anio, dt)
 
             #obtenemos el dia del año concreto
             diaAnio = IDIAAN(dia,mes,anio)
@@ -180,8 +181,8 @@ def generarFichero():
                 print("Error: formato de fecha incorrecto o datos incorrectos.")
                 return
 
-            #llamamos a fases luna
-            FasesDeLaLUNA(anio, dt)
+            #calculamos el .dat de fases de la luna
+            FasesDeLaLunaLatex(anio, dt)
 
             #obtenemos el dia del año concreto de la fecha inicial
             diaAnIni = IDIAAN(diaIni, mesIni, anioIni)

@@ -32,6 +32,7 @@ if str(ruta_Padre) not in sys.path:
 
 #importamos las funciones que necesitemos
 from utils.funciones import MesNom, DiasMes, Rad2MArc, DiaJul, DJADia, TDBTDT
+from utils.read_de440 import GeoDista
 
 #vamos a crear dos funciones que nos ayudarán a mantener el formato de escritura que realiza el archivo FORTRAN original
 """""
@@ -90,32 +91,6 @@ def signo_pos_A_string(cadena_valores):
     '+1.2-2.0' (según el ejemplo que hemos usado)
     """""
     return "".join(lista_simbolos)
-
-
-"""
-Creamos esta función, aunque se repita en más partes del programa, debido a que la funcion PLEPH es distinta
-para cada módulo, luego hay que implementar por separado la función
-Cabecera:   def GeoDista(jd, p)
-PRE:        Recibe el dia juliano y el numero del planeta
-POST:       Calcula la distancia geocentrica entre la tierra (origen o = 3)
-            y el planeta 'p' en el dia juliano 'jd'
-"""
-
-#queda por probar esta funcion
-def GeoDista(jd, p):
-    o = 3   #origen geocentrico
-    
-    #Convertir TT -> TDB(Tiempo Dinamico Baricentrico)
-    tdb = TDBTDT(jd)
-
-    #Obtener vector posicion/velocidad [x, y, z, u, v, w]
-    r = PLEPH(tdb, p, o)
-
-    #Calcular distancia geocentrica
-    distancia = math.sqrt(r[0]**2 + r[1]**2 + r[2]**2)
-
-    return distancia
-
 
 
 """""
