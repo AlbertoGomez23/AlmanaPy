@@ -1,68 +1,178 @@
+import streamlit as st
+import sys
+import os
+import shutil
+from pathlib import Path
 from datetime import datetime
 
-import streamlit as st
+# =============================================================================
+# 1. CONFIGURACIÓN DE RUTAS E IMPORTACIONES
+# =============================================================================
+# Añadimos la carpeta 'src' al path del sistema para importar los módulos
+current_dir = Path(__file__).parent.resolve()
+src_path = current_dir / "src"
+if str(src_path) not in sys.path:
+    sys.path.append(str(src_path))
 
+# Intentamos importar la lógica (Asumiendo que los archivos son main.py dentro de sus carpetas)
+try:
+    from src.estrellas.main_estrella import generar_datos_estrellas
+    ESTRELLAS_AVAILABLE = True
+except ImportError as e:
+    print(f"Error importando Estrellas: {e}") 
+    ESTRELLAS_AVAILABLE = False
+
+try:
+    from src.polar.main_polar import generar_datos_polar
+    POLAR_AVAILABLE = True
+except ImportError as e:
+    print(f"Error importando Polar: {e}")
+    POLAR_AVAILABLE = False
+
+# =============================================================================
+# 2. CONFIGURACIÓN DE LA PÁGINA
+# =============================================================================
 st.set_page_config(
-    page_title="Almanaque Náutico ROA",
-    page_icon="⚓",
+    page_title="Almanaque Nautico ROA",
     layout="wide"
 )
 
-st.title("⚓ Almanaque Náutico - Real Instituto y Observatorio de la Armada")
+st.title("Almanaque Nautico - Real Instituto y Observatorio de la Armada")
 st.markdown("---")
 
-# Sidebar for configuration
+# =============================================================================
+# 3. SIDEBAR (CONFIGURACIÓN)
+# =============================================================================
 with st.sidebar:
-    st.header("Configuración de Generación")
-
-    year = st.number_input("Año del Almanaque", min_value=1900,
-                           max_value=2100, value=datetime.now().year + 1)
-
-    st.subheader("Opciones de Cálculo")
-    calc_stars = st.checkbox("Calcular Posiciones de Estrellas", value=True)
-    calc_moon = st.checkbox("Calcular Fases de la Luna", value=True)
-    calc_sun = st.checkbox("Calcular Semidiámetro del Sol", value=True)
-
-    st.markdown("---")
-    st.caption("Versión del Sistema: Modern (Python 3.12)")
-
-# Main content area
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("Estado del Sistema")
-    st.info("Sistema listo para generar efemérides.")
-
-    # Mockup of a log or output area
-    st.text_area(
-        "Log de Salida (Simulado)",
-        value="Esperando inicio del proceso...\nCargando kernels SPICE (de440.bsp)...\nListo.",
-        height=300,
-        disabled=True
+    st.header("Configuracion General")
+    
+    # Selector de Año
+    year = st.number_input(
+        "Año del Almanaque", 
+        min_value=1900, 
+        max_value=2100, 
+        value=datetime.now().year + 1,
+        help="Rango permitido: 1900 - 2100"
     )
 
+    st.markdown("---")
+    st.header("Parametros Fisicos")
+    
+    # Delta T
+    delta_t_type = st.radio("Configuracion Delta T", ["Automatico", "Manual"], index=0)
+    
+    delta_t_val = 0.0
+    if delta_t_type == "Manual":
+        # Rango estricto 0 a 150
+        delta_t_val = st.number_input(
+            "Valor Delta T (segundos)", 
+            value=69.0, 
+            step=0.1, 
+            format="%.2f",
+            min_value=0.0, 
+            max_value=150.0,
+            help="Valor en segundos. Rango permitido: 0 - 150"
+        )
+    
+    # Traducir selección para el backend
+    tipo_dt_backend = 'manual' if delta_t_type == "Manual" else 'auto'
+
+    st.markdown("---")
+    st.caption("Version: Modern Python 3 (Dockerized)")
+
+# =============================================================================
+# 4. ÁREA PRINCIPAL
+# =============================================================================
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    st.subheader("Modulos a Calcular")
+    
+    # --- Módulo Estrellas ---
+    run_stars = st.checkbox("Estrellas (Pag 376-381)", value=True, disabled=not ESTRELLAS_AVAILABLE)
+    
+    if not ESTRELLAS_AVAILABLE:
+        st.error("Modulo Estrellas no encontrado en src/")
+            
+    # --- Módulo Polar ---
+    run_polar = st.checkbox("Polar (Pag 382-385)", value=True, disabled=not POLAR_AVAILABLE)
+    if not POLAR_AVAILABLE:
+        st.error("Modulo Polar no encontrado en src/")
+
 with col2:
-    st.subheader("Acciones")
+    st.subheader("Generacion y Resultados")
+    
+    generate_btn = st.button("Generar Almanaque", type="primary", use_container_width=True)
 
-    if st.button("Generar Almanaque Completo", type="primary", use_container_width=True):
-        st.toast(f"Iniciando generación para el año {year}...", icon="🚀")
-        with st.spinner('Calculando efemérides...'):
-            # This is non-functional, so we just simulate a delay or action
-            import time
-            time.sleep(2)
-        st.success("¡Generación completada! (Simulación)")
-        st.balloons()
+    if generate_btn:
+        output_paths = []
+        
+        # Contenedor de estado
+        with st.status("Procesando calculos...", expanded=True) as status:
+            
+            # 1. Ejecutar Estrellas
+            if run_stars and ESTRELLAS_AVAILABLE:
+                st.write(f"Calculando Efemerides de Estrellas (Año {year})...")
+                try:
+                    path_stars = generar_datos_estrellas(
+                        ano=year, 
+                        tipo_delta_t=tipo_dt_backend, 
+                        valor_delta_t_manual=delta_t_val
+                    )
+                    output_paths.append(path_stars)
+                    st.write("Estrellas completado.")
+                except Exception as e:
+                    st.error(f"Error en Estrellas: {e}")
+                    status.update(label="Error en el proceso", state="error")
+                    st.stop()
 
-    st.markdown("### Descargas")
-    st.button("Descargar PDF (Mock)", disabled=True, use_container_width=True)
-    st.button("Descargar LaTeX (Mock)",
-              disabled=True, use_container_width=True)
+            # 2. Ejecutar Polar
+            if run_polar and POLAR_AVAILABLE:
+                st.write(f"Calculando Polar (Año {year})...")
+                try:
+                    path_polar = generar_datos_polar(
+                        ano=year,
+                        tipo_delta_t=tipo_dt_backend,
+                        valor_delta_t_manual=delta_t_val
+                    )
+                    # Evitar duplicar ruta si es la misma
+                    if path_polar not in output_paths:
+                        output_paths.append(path_polar)
+                    st.write("Polar completado.")
+                except Exception as e:
+                    st.error(f"Error en Polar: {e}")
+                    status.update(label="Error en el proceso", state="error")
+                    st.stop()
+            
+            status.update(label="Calculos finalizados correctamente", state="complete", expanded=False)
+
+        # GESTIÓN DE DESCARGA
+        if output_paths:
+            final_dir = output_paths[0] 
+            
+            if os.path.exists(final_dir):
+                                
+                # Crear ZIP
+                zip_filename = f"Almanaque_Nautico_{year}"
+                zip_path = shutil.make_archive(final_dir, 'zip', final_dir)
+                
+                # Botón de Descarga
+                with open(zip_path, "rb") as fp:
+                    st.download_button(
+                        label=f"Descargar Archivos .DAT ({year})",
+                        data=fp,
+                        file_name=f"{zip_filename}.zip",
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+            else:
+                st.error("Error: No se encontro el directorio de salida.")
 
 st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: grey;'>
-        <small>Proyecto de Modernización del Almanaque Náutico | ROA</small>
+        <small>Proyecto de Modernizacion del Almanaque Nautico | ROA | Ingenieria Informatica</small>
     </div>
     """,
     unsafe_allow_html=True
