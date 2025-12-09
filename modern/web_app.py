@@ -5,6 +5,14 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
+hide_menu = """
+    <style>
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_menu, unsafe_allow_html=True)
+
 # =============================================================================
 # 1. CONFIGURACIÓN DE RUTAS E IMPORTACIONES
 # =============================================================================
