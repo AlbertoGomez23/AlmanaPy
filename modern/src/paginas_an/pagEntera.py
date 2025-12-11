@@ -18,6 +18,7 @@ ruta_Padre = ruta_paginas_an.parent
 #obtenemos la ruta de DE440
 ruta_DE440 = ruta_Padre / 'data' / 'de440.bsp'
 
+ruta_data = ruta_padre.parent.parent
 
 #importamos todas las funciones necesarias
 from subAN import *
@@ -348,7 +349,7 @@ def UNAPAG(da, annio, dt):
     nombre_dia_sem = num_a_dia[DiaSem(jd)]
 
     #obtenemos la ruta de salida
-    fichero_salida = ruta_Padre / "Datos" / "PAG.dat"
+    fichero_salida = ruta_data / "data" / "almanaque_nautico" / f"{annio}" / "PAG.dat"
     fichero_salida.parent.mkdir(parents=True, exist_ok=True)
 
     #creamos variables de estado para la interpolación
@@ -390,10 +391,7 @@ def UNAPAG(da, annio, dt):
         sd_lun = calc_sd_luna(dist_lun)
         f23.write(f"S D : {sd_lun:4.1f}\n")     #escribimos en el fichero el resultado
 
-        """
-        OJO, COMPROBAR RUTA DE DONDE SE GUARDA FASES DE FASELUNA (Preguntar a Alberto)
-        """
-        fichero_fases = ruta_Padre / "Datos" / can / f"Fases{can}.dat"
+        fichero_fases = ruta_data / "data" / "almanaque_nautico" /  f"{can}" / f"Fases{can}.dat"
         edad_luna = 0.0
 
         #calculamos la edad de la luna usando el fichero generado en faseLuna

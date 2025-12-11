@@ -4,12 +4,10 @@ import time     #eficiente para medidas de tiempo
 from pathlib import Path
 
 
-"""""
-----------------------DESCOMENTAR TRAS TENER LOS DEMAS FICHEROS LISTOS-------------------------------------
 #importamos las funciones necesarias de este mismo módulo
-from faseLuna  import FasesDeLaLUNA
+from faseLuna  import FasesDeLaLunaDatos
 from pagEntera import UNAPAG
-"""""
+
 
 #obtenemos la ruta absoluta de ESTE fichero
 ruta_fichDatAN = Path(__file__).resolve()
@@ -31,7 +29,7 @@ if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
 
 from utils.funciones import DiaJul
-from fase_luna.faseLuna import FasesDeLaLunaLatex
+from fase_luna.faseLuna import FasesDeLaLunaDatos
 
 """""
 Cabecera: IDIAAN(dia: int, mes: int, anio: int) -> int
@@ -77,7 +75,7 @@ def generarFichero():
 
 
     #obtenemos la ruta de los datos
-    ruta_datos = ruta_Padre / "Datos" / "PaginasAN"
+    ruta_datos = ruta_Padre.parent.parent / "data"
 
     """""
     leemos el fichero PAG.DAT, en el cual es el que se escribe una página entera,
@@ -103,7 +101,7 @@ def generarFichero():
                 return
 
             #calculamos el .dat de fases de la luna
-            FasesDeLaLunaLatex(anio, dt)
+            FasesDeLaLunaDatos(anio, dt)
 
             #preparamos el fichero final
             canio = f"{anio:04d}"   #ponemos el año en formato de 4 dígitos
@@ -122,7 +120,7 @@ def generarFichero():
                         pues en fortran se trata como si fuese global,
                         pero eso en python no es una buena práctica
                         """""
-                        #UNAPAG(i, anio, dt)        
+                        UNAPAG(i, anio, dt)        
 
                         #copiamos los datos obtenidos de UNAPAG en el fichero final
                         try:
@@ -158,7 +156,7 @@ def generarFichero():
                 return
 
             #calculamos el .dat de fases de la luna
-            FasesDeLaLunaLatex(anio, dt)
+            FasesDeLaLunaDatos(anio, dt)
 
             #obtenemos el dia del año concreto
             diaAnio = IDIAAN(dia,mes,anio)
@@ -182,7 +180,7 @@ def generarFichero():
                 return
 
             #calculamos el .dat de fases de la luna
-            FasesDeLaLunaLatex(anio, dt)
+            FasesDeLaLunaDatos(anio, dt)
 
             #obtenemos el dia del año concreto de la fecha inicial
             diaAnIni = IDIAAN(diaIni, mesIni, anioIni)
