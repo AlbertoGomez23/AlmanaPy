@@ -5,13 +5,6 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
-hide_menu = """
-    <style>
-        #MainMenu {visibility: hidden;}
-        header {visibility: hidden;}
-    </style>
-"""
-st.markdown(hide_menu, unsafe_allow_html=True)
 
 # =============================================================================
 # 1. CONFIGURACIÓN DE RUTAS E IMPORTACIONES
@@ -41,18 +34,29 @@ except ImportError as e:
 # 2. CONFIGURACIÓN DE LA PÁGINA
 # =============================================================================
 st.set_page_config(
-    page_title="Almanaque Nautico ROA",
-    layout="wide"
+    page_title="Almanaque Náutico ROA",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-st.title("Almanaque Nautico - Real Instituto y Observatorio de la Armada")
+st.title("Almanaque Náutico - Real Instituto y Observatorio de la Armada")
 st.markdown("---")
+
+# --- INICIO CÓDIGO NUEVO ---
+st.markdown("""
+    <style>
+        button[data-testid="stAppDeployButton"] {
+            display: none !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+# --- FIN CÓDIGO NUEVO ---
 
 # =============================================================================
 # 3. SIDEBAR (CONFIGURACIÓN)
 # =============================================================================
 with st.sidebar:
-    st.header("Configuracion General")
+    st.header("Configuración General")
     
     # Selector de Año
     year = st.number_input(
@@ -64,10 +68,10 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.header("Parametros Fisicos")
+    st.header("Parametros Físicos")
     
     # Delta T
-    delta_t_type = st.radio("Configuracion Delta T", ["Automatico", "Manual"], index=0)
+    delta_t_type = st.radio("Configuración Delta T", ["Automático", "Manual"], index=0)
     
     delta_t_val = 0.0
     if delta_t_type == "Manual":
@@ -94,21 +98,26 @@ with st.sidebar:
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("Modulos a Calcular")
+    st.subheader("Módulos a Calcular")
     
+    # --- CHECKBOX MAESTRO (SELECCIONAR TODO) ---
+    select_all = st.checkbox("Seleccionar Todos los Módulos", value=True)
+    st.markdown("---") # Pequeña linea separadora
+
     # --- Módulo Estrellas ---
-    run_stars = st.checkbox("Estrellas (Pag 376-381)", value=True, disabled=not ESTRELLAS_AVAILABLE)
+    # El valor por defecto ahora depende de 'select_all'
+    run_stars = st.checkbox("Estrellas (Pag 376-381)", value=select_all, disabled=not ESTRELLAS_AVAILABLE)
     
     if not ESTRELLAS_AVAILABLE:
-        st.error("Modulo Estrellas no encontrado en src/")
+        st.error("Módulo Estrellas no encontrado en src/")
             
     # --- Módulo Polar ---
-    run_polar = st.checkbox("Polar (Pag 382-385)", value=True, disabled=not POLAR_AVAILABLE)
+    run_polar = st.checkbox("Polar (Pag 382-385)", value=select_all, disabled=not POLAR_AVAILABLE)
     if not POLAR_AVAILABLE:
         st.error("Modulo Polar no encontrado en src/")
 
 with col2:
-    st.subheader("Generacion y Resultados")
+    st.subheader("Generación y Resultados")
     
     generate_btn = st.button("Generar Almanaque", type="primary", use_container_width=True)
 
@@ -120,7 +129,7 @@ with col2:
             
             # 1. Ejecutar Estrellas
             if run_stars and ESTRELLAS_AVAILABLE:
-                st.write(f"Calculando Efemerides de Estrellas (Año {year})...")
+                st.write(f"Calculando Efemérides de Estrellas (Año {year})...")
                 try:
                     path_stars = generar_datos_estrellas(
                         ano=year, 
@@ -180,7 +189,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: grey;'>
-        <small>Proyecto de Modernizacion del Almanaque Nautico | ROA | Ingenieria Informatica</small>
+        <small>Proyecto de Modernización del Almanaque Nautico | ROA | Ingeniería Informática</small>
     </div>
     """,
     unsafe_allow_html=True
