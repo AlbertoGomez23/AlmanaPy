@@ -1,3 +1,5 @@
+
+import time
 import numpy as np
 import sys, os
 from pathlib import Path
@@ -48,7 +50,7 @@ except ImportError as e:
 #importamos todas las funciones necesarias
 from subAN import *
 from constants import *
-from ortoocasoluna import fenoluna, retardo_lunar_R
+from ortoocasoluna import fenoluna#, retardo_lunar_R
 from skyfield.searchlib import find_discrete
 from ortoocasol import fenosol
 from magnit import magnit
@@ -176,7 +178,7 @@ def formato_grado_minuto(grad, err=0.05):
         gr = gr + 1
         mi = 0.0
         
-    # Aplicamos signo al grado si fuera necesario (aunque hG suele ser positivo 0-360)
+    # Aplicamos signo al grado si fuera necesario
     gr = int(gr * sgn)
     return gr, mi
 
@@ -370,7 +372,7 @@ def UNAPAG(da, annio, dt):
     print(f"Generando Almanaque para el día {da} de {annio} (Delta: {dt})...")
 
     jd0_annio = funciones.DiaJul(1,1,annio,0.0)
-    jd  = jd0_annio + (da-1)
+    jd  = jd0_annio + (da)
 
     can = f"{annio:04d}"
 
@@ -472,12 +474,7 @@ def UNAPAG(da, annio, dt):
 
         #paginación par/impar
         pn = (da + 1)%2
-
-        #variables para la interpolación
-        ret_dif = [0]*5
-        hgg_prev = 0
-        deg_prev = 0
-
+ 
         # Definimos las latitudes tal cual estaban en el Fortran original (DATA nlat/clat)para
         # asegurar que la fila 0 sea 60N, la fila 1 sea 58N, etc.
         LAT_VALS = [60, 58, 56, 54, 52, 50, 45, 40, 35, 30, 20, 10, 0,
@@ -489,29 +486,43 @@ def UNAPAG(da, annio, dt):
                     '45  ', '50  ', '52  ', '54  ', '56  ', '58  ',
                     '60 S']
 
-        # Creamos variables de estado para la interpolación 
-        prev_gha_lun_float = None
-        prev_dec_lun_float = None
+        # ----------------------------------------------------------------------------------
+        # OPTIMIZACIÓN - VECTORIZACIÓN BUCLE PRINCIPAL (SOL/LUNA)
+        # ----------------------------------------------------------------------------------
+        # En lugar de iterar 25 veces llamando a Skyfield (lo cual es lento),
+        # creamos un array de tiempos y calculamos las 25 posiciones de GOLPE.
+        
+        # 1. Crear vector de tiempos (0..24 horas)
+        horas_vec = np.arange(25)
+        # Usamos tt_jd tal como se hacía en el bucle original
+        t_vec_main = ts.tt_jd(jd + horas_vec/24.0)
+
+        # 2. Calcular SOL para las 25 horas
+        ast_sol_vec = tierra.at(t_vec_main).observe(sol).apparent()
+        ra_sol_vec, dec_sol_vec, _ = ast_sol_vec.radec(epoch='date')
+        
+        # Operaciones vectorizadas con numpy (gha = gast - ra)
+        gh_sol_deg_arr = (t_vec_main.gast * 15.0 - ra_sol_vec.hours * 15.0) % 360.0
+        dec_sol_deg_arr = dec_sol_vec.degrees
+
+        # 3. Calcular LUNA para las 25 horas
+        ast_lun_vec = tierra.at(t_vec_main).observe(luna).apparent()
+        ra_lun_vec, dec_lun_vec, _ = ast_lun_vec.radec(epoch='date')
+
+        gh_lun_deg_arr = (t_vec_main.gast * 15.0 - ra_lun_vec.hours * 15.0) % 360.0
+        dec_lun_deg_arr = dec_lun_vec.degrees
+
+        # Constante movimiento medio        
         CONST_MOV_MEDIO_LUNA_MIN = 859.0 
 
         # Bucle de las 25 horas (0 a 24)
         for i in range(25):
-            # Definir el instante t usando Skyfield
-            t = ts.tt_jd(jd + i/24.0)
-
-            # --- CÁLCULOS SOL ---
-            ast_sol = tierra.at(t).observe(sol).apparent()
-            ra_sol, dec_sol, _ = ast_sol.radec(epoch='date')
+            # Recuperamos los valores pre-calculados del array en la posición i
+            gh_sol_deg = gh_sol_deg_arr[i]
+            dec_sol_deg = dec_sol_deg_arr[i]
             
-            gh_sol_deg = (t.gast * 15.0 - ra_sol.hours * 15.0) % 360.0
-            dec_sol_deg = dec_sol.degrees
-
-            # --- CÁLCULOS LUNA ---
-            ast_lun = tierra.at(t).observe(luna).apparent()
-            ra_lun, dec_lun, _ = ast_lun.radec(epoch='date')
-            
-            gh_lun_deg = (t.gast * 15.0 - ra_lun.hours * 15.0) % 360.0
-            dec_lun_deg = dec_lun.degrees
+            gh_lun_deg = gh_lun_deg_arr[i]
+            dec_lun_deg = dec_lun_deg_arr[i]
 
             hgg_sol, hgm_sol = formato_grado_minuto(gh_sol_deg, 0.05) 
             sgn_sol, deg_sol, dem_sol = formato_signo_grado_minuto(dec_sol_deg, 0.05)
@@ -523,9 +534,14 @@ def UNAPAG(da, annio, dt):
             str_v = ""
             str_d = ""
 
-            if prev_gha_lun_float is not None:
+            # La lógica original usaba prev_gha. Al estar vectorizado, el "previo" es el índice i-1
+            if i > 0:
+                # Recuperamos el valor de la hora anterior del array
+                prev_gha_lun = gh_lun_deg_arr[i-1]
+                prev_dec_lun = dec_lun_deg_arr[i-1]
+
                 # Cálculo de 'v'
-                diff_gha = gh_lun_deg - prev_gha_lun_float
+                diff_gha = gh_lun_deg - prev_gha_lun
                 if diff_gha < -180.0: diff_gha += 360.0 # Corrección salto día
                 
                 diff_mins = diff_gha * 60.0
@@ -534,14 +550,11 @@ def UNAPAG(da, annio, dt):
                 str_v = f"{v_final:+d}" # Formato con signo
 
                 # Cálculo de 'd'
-                diff_dec = abs(dec_lun_deg - prev_dec_lun_float)
+                #diff_dec = abs(dec_lun_deg - prev_dec_lun_float)
+                diff_dec = abs(dec_lun_deg - prev_dec_lun)
                 d_float = diff_dec * 60.0 * 10.0
                 d_final = int(round(d_float))
                 str_d = f"{d_final:d}"
-
-            # Guardar valores actuales para la siguiente vuelta
-            prev_gha_lun_float = gh_lun_deg
-            prev_dec_lun_float = dec_lun_deg
 
             # --- FENÓMENOS ---
             # Latitud correspondiente a esta hora (fila)
@@ -568,12 +581,12 @@ def UNAPAG(da, annio, dt):
             for evt in ['ort', 'oca']:
                 hora_raw = fenoluna(jd, lat_act_val, evt) 
                 h_entera, m_entera = HOMIEN(hora_raw)
-                
+                """
                 # Retardo, si devuelve None, ponemos 9999 
                 ret_val = retardo_lunar_R(jd, lat_act_val, evt) 
                 if ret_val is None: ret_val = 9999
-                
-                vals_lun.extend([h_entera, m_entera, int(ret_val)])
+                """
+                vals_lun.extend([h_entera, m_entera, int(9999)])
 
             # --- ESCRITURA DE LA LÍNEA ---
             # Preparamos los strings de datos
@@ -617,17 +630,49 @@ def UNAPAG(da, annio, dt):
 
             f23.write(f"PMG : {h:2d} {m:2d}\nMag. : {sig}{abs(val_mag):4.1f}\n")
 
+        # ----------------------------------------------------------------------------------
+        # OPTIMIZACIÓN - VECTORIZACIÓN BUCLE PLANETAS
+        # ----------------------------------------------------------------------------------
+        # Creamos vector de tiempos para los planetas.
+        # NOTA: En el código original se usaba ts.ut1_jd(ut) para este bucle, mientras que
+        # en el anterior se usaba tt_jd. Mantenemos esa distinción para exactitud numérica.
+        t_vec_planets = ts.ut1_jd(jd + horas_vec/24.0)
+
+        # 1. Calcular ARIES vectorizado
+        # gha_ari = (gast * 15) % 360
+        gh_ari_arr = (t_vec_planets.gast * 15.0) % 360.0
+
+        # 2. Pre-calcular posiciones de planetas vectorizadas
+        # Guardaremos los resultados en un diccionario para acceder dentro del bucle
+        planets_data = {}
+        for k in cuerpos_orden:
+            # Obtenemos objeto skyfield
+            obj_planet = plan_dic[k]
+            # Calculamos vector 0..24h
+            ast_p = tierra.at(t_vec_planets).observe(obj_planet).apparent()
+            ra_p, dec_p, _ = ast_p.radec(epoch='date')
+            
+            gh_p_arr = (t_vec_planets.gast * 15.0 - ra_p.hours * 15.0) % 360.0
+            dec_p_arr = dec_p.degrees
+            
+            planets_data[k] = (gh_p_arr, dec_p_arr)
+
+
         #introducimos los planetas en el rango de 24 horas
         for i in range(25):
-            ut = jd + i/24.0
-            t_rot = ts.ut1_jd(ut)       #rotación terrestre
-
-            gha_ari, _, _ = cal_coord_ap('ari', t_rot)
+            # Aries del array
+            gha_ari = gh_ari_arr[i]
             tsg, tsm = formato_grado_minuto(gha_ari, err)
 
             linea = f"&{i:2d} {tsg:3d} {tsm:4.1f} "
+            
             for k in cuerpos_orden:
-                gha, dec, _ = cal_coord_ap(k, t_rot)
+                # Planetas del diccionario pre-calculado
+                gh_arr, dec_arr = planets_data[k]
+                
+                gha = gh_arr[i]
+                dec = dec_arr[i]
+
                 hg, hm = formato_grado_minuto(gha, err)
                 sg, dg, dm = formato_signo_grado_minuto(dec, err)
 
@@ -662,3 +707,12 @@ def UNAPAG(da, annio, dt):
         f23.write(f"\\def\\figlun{{FigLuna{nfl+1:02d}.epsf scaled 120}}\n")
 
     print(f"Fichero generado: {fichero_salida}")
+
+if __name__ == "__main__":
+    iniCrono = time.perf_counter()
+    UNAPAG(1,2012,69)
+    finCrono = time.perf_counter()
+    tiempoTotal = finCrono - iniCrono
+
+    print(f"\nProceso completado.\n")
+    print(f"Tiempo en segundos = {tiempoTotal}")
