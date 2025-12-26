@@ -41,7 +41,7 @@ class PagTexProcessor:
         return "".join(s_list)
 
     # --- Lógica PAGTEXBIS ---
-    def pagtex_bis(self, da, ano):
+    def pagtex_bis(self, da, ano, input_path=None, output_path=None):
         self.v = [" " * 110] * 25 # Reiniciar buffer
         ida = da + 9
         
@@ -49,16 +49,16 @@ class PagTexProcessor:
         # Nota: He adaptado la ruta absoluta a relativa para que te funcione localmente.
         # Original: /Almanaque Nautico/DATOS/...
         if ida < 100:
-            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:02d}.DAT"
+            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:02d}.dat"
         else:
-            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:03d}.DAT"
+            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:03d}.dat"
 
         # Asegurar directorios
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         try:
-            self.f_in = open('./Datos/pag.dat', 'r', encoding='latin-1')
-            self.f_out = open(path, 'w', encoding='latin-1')
+            self.f_in = open(input_path or './Datos/pag.dat', 'r', encoding='latin-1')
+            self.f_out = open(output_path or path, 'w', encoding='latin-1')
         except FileNotFoundError as e:
             print(f"Error: {e}")
             return

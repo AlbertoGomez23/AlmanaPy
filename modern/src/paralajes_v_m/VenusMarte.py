@@ -121,29 +121,9 @@ fichero "funciones.py", que se encuentra en la carpeta "Comun"
 Postcondición: Crea el fichero .dat en el que se recopilan los datos sobre el paralaje de Venus y Marte en el año y
 con la variable Delta dada por el usuario
 """""
-def calculo_paralaje():
-    #pedimos al usuario que introduzca los datos
-    while True:
-        anio = input("Introduzca el año a calcular: ")
+def calculo_paralaje(anio:int, dT:int):
 
-        #comprobamos si no hay error
-        try:
-            anio = int(anio)
-            break
-        except ValueError:  #si encontramos un error, pedimos de nuevo el parámetro
-            print(f"Error, escriba de nuevo el dato\n")
-        
-    while True:
-        dT = input("Introduzca dT = TT - UT (en segundos): ")
-
-        #comprobamos si no hay error
-        try:
-            dT = float(dT)
-            break
-        except ValueError:  #si encontramos un error, pedimos de nuevo el parámetro
-            print(f"Error, escriba de nuevo el dato\n")
-
-
+    dT = float(dT)
     dT = dT/86400.0     #transformamos de segundos a días
 
     #creamos una variable para el radio de la Tierra en UA
@@ -281,6 +261,8 @@ def calculo_paralaje():
 
     print(f"Archivo '{archivo_datos}' generado con exitosamente.")
 
-#hacemos que este fichero se ejecute como principal
+"""""
+#Prueba de generación
 if __name__ == "__main__":
     calculo_paralaje()
+"""""

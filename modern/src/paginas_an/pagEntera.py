@@ -37,9 +37,7 @@ if ruta_str not in sys.path:
     sys.path.append(ruta_str)
 
 try:
-    # Importación de librerías astronómicas propias (dependencias externas)
-    # fun: utilidades de fecha (Conversión Gregoriano <-> Juliano)
-    # _ts: escala de tiempo para posiciones planetarias
+    # Importación de librerías
     from utils import funciones 
 except ImportError as e:
     # Si faltan las librerías, el programa fallará al llamar a las funciones de cálculo,
@@ -64,7 +62,6 @@ lista de strings
 """""
 if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
-
 
 
 #cargamos el DE440 para poder realizar los cálculos que queramos
@@ -329,8 +326,14 @@ def Paso_Mer(jdInicio, cuerpo, dt):
 
     #hay un momento en el que el astro cruzó el meridiano
     if len(tiempos) > 0:
-        return (tiempos[0].ut1 - jdInicio) * 24.0       #devuelve la hora exacta
-    
+        for t_event in tiempos:
+            gha_check, _, _ = cal_coord_ap(cuerpo, t_event)
+            # normalizamos a -180, 180
+            if gha_check > 180: gha_check -= 360
+            
+            if abs(gha_check) < 90: # margen seguro
+                 return (t_event.ut1 - jdInicio) * 24.0
+        
     return 12.0
 
 """""
@@ -369,15 +372,15 @@ un fichero .dat, el cual contiene toda la información en formato
 LaTeX.
 """""
 def UNAPAG(da, annio, dt):
-    print(f"Generando Almanaque para el día {da} de {annio} (Delta: {dt})...")
+    print(f"Generando página para el día {da} de {annio} (Delta: {dt})...")
 
     jd0_annio = funciones.DiaJul(1,1,annio,0.0)
-    jd  = jd0_annio + (da)
+    jd  = jd0_annio + (da - 1)
 
     can = f"{annio:04d}"
 
     #obtenemos los datos para la cabecera
-    dia, mes, anomas, _ = funciones.DJADia(jd)
+    dia, mes, anomas, _ = funciones.DJADia(jd + 1)
     nombre_mes = MesANom(mes)
     nombre_dia_sem = num_a_dia[DiaSem(jd)]
 
@@ -431,14 +434,28 @@ def UNAPAG(da, annio, dt):
         try:
             if fichero_fases.exists():
                 vals = [float(x) for x in fichero_fases.read_text().split()]
-                ult_fase = vals[0]
-                for v in vals:
-                    if v > 0 and jd < v:
-                        edad_luna = jd - ult_fase
+                ult_fase = 0.0
+                
+                # Iteramos por todos los valores                 
+                for idx, v in enumerate(vals):
+                    # Comprobamos si esta fase ocurre DESPUES del dia actual
+                    if v > 0 and v > jd:
+                        """""
+                        encontramos una fase en el futuro.
+                        la edad actual se determina por la NUEVA LUNA anterior que procesamos.
+                        Nota: no paramos inmediatamente si esto no es una Nueva Luna,
+                        pero en realidad solo necesitamos la última Nueva Luna válida.
+                        Si la fase futura es una Nueva Luna, `ult_fase` (prev new moon) es correcta.
+                        """""
                         break
                     
-                    if v > 0:
+                    if v > 0 and (idx % 4 == 0):
                         ult_fase = v
+                
+                if ult_fase > 0:
+                    edad_luna = jd - ult_fase
+                else:
+                    edad_luna = 0.0
             else:
                 print("Aviso: no existe fichero Fases, edad_luna = 0")
         except:
@@ -531,8 +548,8 @@ def UNAPAG(da, annio, dt):
             sgn_lun, deg_lun, dem_lun = formato_signo_grado_minuto(dec_lun_deg, 0.05)
 
             # --- LÓGICA DE INTERPOLACIÓN 'v' y 'd' ---
-            str_v = ""
-            str_d = ""
+            str_v = 0
+            str_d = 0
 
             # La lógica original usaba prev_gha. Al estar vectorizado, el "previo" es el índice i-1
             if i > 0:
@@ -547,14 +564,14 @@ def UNAPAG(da, annio, dt):
                 diff_mins = diff_gha * 60.0
                 v_float = (diff_mins - CONST_MOV_MEDIO_LUNA_MIN) * 10.0
                 v_final = int(round(v_float))
-                str_v = f"{v_final:+d}" # Formato con signo
+
 
                 # Cálculo de 'd'
                 #diff_dec = abs(dec_lun_deg - prev_dec_lun_float)
                 diff_dec = abs(dec_lun_deg - prev_dec_lun)
                 d_float = diff_dec * 60.0 * 10.0
                 d_final = int(round(d_float))
-                str_d = f"{d_final:d}"
+
 
             # --- FENÓMENOS ---
             # Latitud correspondiente a esta hora (fila)
@@ -581,17 +598,19 @@ def UNAPAG(da, annio, dt):
             for evt in ['ort', 'oca']:
                 hora_raw = fenoluna(jd, lat_act_val, evt) 
                 h_entera, m_entera = HOMIEN(hora_raw)
-                """
-                # Retardo, si devuelve None, ponemos 9999 
-                ret_val = retardo_lunar_R(jd, lat_act_val, evt) 
-                if ret_val is None: ret_val = 9999
-                """
-                vals_lun.extend([h_entera, m_entera, int(9999)])
+                
+                maniana = fenoluna(jd + 1, lat_act_val, evt)
+                today = hora_raw  
+                if maniana is None or today is None:
+                    ret_val = 9999
+                else:
+                    ret_val = ROUND(maniana * 60) - ROUND(today * 60)
+                vals_lun.extend([h_entera, m_entera, int(ret_val)])  
 
             # --- ESCRITURA DE LA LÍNEA ---
             # Preparamos los strings de datos
             s_sol = f"{hgg_sol:3d} {hgm_sol:4.1f} {sgn_sol} {deg_sol:2d} {dem_sol:4.1f}"
-            s_lun = f"{hgg_lun:3d} {hgm_lun:4.1f}" 
+            s_lun = f"{hgg_lun:3d} {hgm_lun:4.1f}"
             s_lun_dec = f"{sgn_lun} {deg_lun:2d} {dem_lun:4.1f}"
             
             # 6 columnas para el sol (h m h m h m)
@@ -603,11 +622,10 @@ def UNAPAG(da, annio, dt):
             # Escribimos en el fichero (f23 es tu handle de archivo)
             if i == 0:
                 # Hora 0: Sin v ni d
-                linea = f"&{i:2d}  {s_sol}  {s_lun}      {s_lun_dec}      {lat_act_str}  {s_fen_sol}  {s_fen_lun}"
+                linea = f"&{i:2d}  {s_sol}  {s_lun}     {s_lun_dec}      {lat_act_str}  {s_fen_sol}  {s_fen_lun}"
             else:
                 # Hora > 0: Con v y d interpolados
-                linea = f"&{i:2d}  {s_sol}  {s_lun} {str_v:>3} {s_lun_dec} {str_d:>3}  {lat_act_str}  {s_fen_sol}  {s_fen_lun}"
-            
+                linea = f"&{i:2d}  {s_sol}  {s_lun} {v_final:3d} {s_lun_dec} {d_final:3d}  {lat_act_str}  {s_fen_sol}  {s_fen_lun}"            
             f23.write(linea + "\n")
 
 
@@ -707,7 +725,8 @@ def UNAPAG(da, annio, dt):
         f23.write(f"\\def\\figlun{{FigLuna{nfl+1:02d}.epsf scaled 120}}\n")
 
     print(f"Fichero generado: {fichero_salida}")
-
+"""""
+#Prueba de generación
 if __name__ == "__main__":
     iniCrono = time.perf_counter()
     UNAPAG(1,2012,69)
@@ -716,3 +735,4 @@ if __name__ == "__main__":
 
     print(f"\nProceso completado.\n")
     print(f"Tiempo en segundos = {tiempoTotal}")
+"""""

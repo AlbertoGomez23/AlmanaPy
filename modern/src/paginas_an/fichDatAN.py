@@ -6,7 +6,7 @@ from pathlib import Path
 
 #importamos las funciones necesarias de este mismo módulo
 from pagEntera import UNAPAG
-
+from pagLatex import PagTexProcessor
 
 #obtenemos la ruta absoluta de ESTE fichero
 ruta_fichDatAN = Path(__file__).resolve()
@@ -65,31 +65,26 @@ def IDIAAN(dia: int, mes: int, anio: int) -> int:
 
 
 """""
+Cabecera: generarFichero(anio: int, dt: int, opcion = 1)
+Precondición: recibe un año, un delta y una opción (por defecto, generar el año completo)
+Postcondición: genera el fichero final con todos los resultados
+
 generarFichero() es la función principal del módulo PaginasAN, este
 es el cerebro de todo, en el que llama a todas las funciones de este
 para generar las páginas finales con todos los resultados tras realizar
 los distintos cálculos del resto de módulos
 """""
-def generarFichero():
-    #preguntamos al usuario que opción va a elegir
-    print("Preparación de los ficheros de datos necesarios para la edición del Almanaque Náutico.\n")
-    print("Opciones:\n")
-    print(
-        "- Un año(1)\n"
-        "- Un día(2)\n"
-        "- Un intervalo dentro de un año(3)\n"
-    )
-
-    #recogemos la opción que elija el usuario
+def generarFichero(anio: int, dt: int, opcion: int = 1):
+    
+    #comprobamos la opción elegida por el usuario
     while True:
-        
         try:
-            opcion = int(input("Introduzca su opción (1,2 o 3): "))
 
             if opcion in [1,2,3]:
                 break
             else:
                 print("Error, opción inválida.\n")
+                opcion = int(input("Introduzca su opción (1,2 o 3): "))
 
         except ValueError:
             print("Error, escriba un valor válido.\n")
@@ -109,16 +104,19 @@ def generarFichero():
     #iniciamos un cronometro
     iniCrono = time.perf_counter()
 
-    #en base a la opción que ha elegido, realizamos lo siguiente
+    """""
+    En base a la opción que elija el usuario, se realizan los siguientes casos:
+    1: Generar el año completo
+    2: Generar en un día en concreto
+    3: Generar en un intervalo de días
+
+    Los casos 2 y 3 están pensados para ejecutarse de forma exclusiva en terminal, esto
+    para realizar pruebas de generación del fichero en caso de cambios o comprobaciones
+    puntuales. Mientras que el caso 1 está pensado para ejecutarse por defecto, luego
+    no es necesario pedir al usuario final la opción que desea, estas están para pruebas.
+    """""
     match opcion:
         case 1:     #Quiere prepararlo en un año en concreto
-            try:
-                anio = int(input("Año: "))
-                dt = int(input("Introduzca dt (dt = TT - UT): "))
-
-            except ValueError:
-                print("Error: Año y dt deben ser números enteros.\n")
-                return
 
             ruta_final = ruta_datos / str(anio)
 
@@ -136,6 +134,9 @@ def generarFichero():
                 with open(ComDat, "w", encoding="utf-8") as f_out:
                     num_dias = 366
 
+                    #iniciamos el conversor de LaTeX
+                    procLatex = PagTexProcessor()
+
                     #vamos mirando día tras día
                     for i in range(1, num_dias + 1):
                         """""
@@ -144,7 +145,18 @@ def generarFichero():
                         pues en fortran se trata como si fuese global,
                         pero eso en python no es una buena práctica
                         """""
-                        UNAPAG(i, anio, dt)        
+                        UNAPAG(i, anio, dt)  
+
+                        # Definimos la ruta de salida para esta página específica (en subcarpeta latex)
+                        ruta_latex = ruta_final / "latex"
+                        ruta_latex.mkdir(parents=True, exist_ok=True)  # Crear la carpeta si no existe
+
+                        # Definimos la ruta de salida para esta página específica
+                        if i < 100: nombre_fich = f"AN{anio}{i:02d}.dat"
+                        else:       nombre_fich = f"AN{anio}{i:03d}.dat"
+                        path_latex_out = ruta_latex / nombre_fich
+                        # Llamamos al conversor
+                        procLatex.pagtex_bis(i, anio, input_path=PagDat, output_path=path_latex_out)    
 
                         #copiamos los datos obtenidos de UNAPAG en el fichero final
                         try:
@@ -157,8 +169,21 @@ def generarFichero():
                             print(f"Error leyendo/escribiendo {PagDat}: {e}")
                             break
 
-                        print("Generación de archivo de año completo finalizada.")
+                        print(f"Generación de página {i} finalizada.")
 
+                    print("Generación de archivo de año completo finalizada.")
+
+                    # Fusionamos todos los LaTeX en un archivo combinado
+                    latex_completo = ruta_final / f"AN{anio}COMLatex.dat"
+                    with open(latex_completo, 'w', encoding='latin-1') as f_latex:
+                        for j in range(1, num_dias + 1):
+                            if j < 100: nombre_latex = f"AN{anio}{j:02d}.dat"
+                            else:       nombre_latex = f"AN{anio}{j:03d}.dat"
+                            latex_file = ruta_latex / nombre_latex
+                            if latex_file.exists():
+                                f_latex.write(latex_file.read_text(encoding='latin-1'))
+                                f_latex.write("\n")
+                    print(f"LaTeX combinado generado: {latex_completo}")
 
             except IOError as e:
                 print(f"Error fatal al abrir el archivo {ComDat}: {e}")
@@ -220,6 +245,8 @@ def generarFichero():
 
     print(f"\nProceso completado.\n")
     print(f"Tiempo en minutos = {tiempoTotal / 60.0:.4f}")
-
+"""""
+#Prueba de generación
 if __name__ == "__main__":
-    generarFichero()
+    generarFichero(2013, 67)
+"""""
