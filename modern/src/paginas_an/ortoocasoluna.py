@@ -1,19 +1,14 @@
-import sys
-import math
 import numpy as np
-import warnings
+from math import sin, cos, acos, atan, asin, radians
+import sys
 from pathlib import Path
-
-from skyfield.api import wgs84, load
-from skyfield.searchlib import find_discrete
-
-warnings.filterwarnings("ignore", category=UserWarning)
 
 # =============================================================================
 # CONFIGURACIÓN DE RUTAS E IMPORTACIONES
 # =============================================================================
+# Propósito: Asegurar que el script tenga acceso a los módulos de la biblioteca
+# 'utils' y 'subAN' independientemente del directorio de ejecución.
 try:
-    # .../modern/src
     ruta_base = Path(__file__).resolve().parent.parent
 except NameError:
     ruta_base = Path.cwd().parent
@@ -21,219 +16,195 @@ except NameError:
 ruta_str = str(ruta_base)
 if ruta_str not in sys.path:
     sys.path.append(ruta_str)
-    print(f"Añadido al path: {ruta_str}")
 
 try:
-    from utils import read_de440 as lee
-    from utils import coordena
+    from utils import read_de440 as read
+    from utils import coordena as coor
 except ImportError as e:
-    raise ImportError(f"Error importando módulos desde '{ruta_base}': {e}")
+    print(f"Error al importar dependencias críticas: {e}")
 
 # =============================================================================
-# CONSTANTES
+# CONSTANTES FÍSICAS Y RATIOS (PRE-CALCULADOS)
 # =============================================================================
-GR2R = np.pi / 180.0
-R2GR = 180.0 / np.pi
+# Se utilizan valores IAU (Unión Astronómica Internacional) para coherencia con DE440.
+RET_KM = 6378.137      # Radio ecuatorial terrestre en km
+REL_KM = 1737.4        # Radio medio lunar en km
+AU_KM = 149597870.7    # Unidad Astronómica en km
 
-# Refracción estándar en el horizonte (34 minutos de arco)
-REFRACCION_HORIZONTE = 34.0 / 60.0  # grados
-R_MOON_KM = 1737.4                  # Radio medio de la Luna en km
-AU_KM = 149597870.7
-R_EARTH_KM = 6378.137
-# True = fenómeno de subida (orto), False = bajada (ocaso)
-EVENTO_SUBIDA = {
-    "ort": True,
-    "oca": False,
-}
+# Ratios UA: Optimizan el rendimiento eliminando divisiones repetitivas en bucles.
+RET_AU_RATIO = RET_KM / AU_KM
+REL_AU_RATIO = REL_KM / AU_KM
 
 # =============================================================================
-# AUXILIARES
+# FUNCIONES AUXILIARES DE CÁLCULO
 # =============================================================================
-def format_hms(hours_decimal):
-    """Convierte horas decimales a HH:MM:SS. 9999.0 → 'n/a'."""
-    if hours_decimal is None or hours_decimal == 9999.0:
-        return "n/a"
-    h = int(hours_decimal) % 24
-    m = int((hours_decimal - int(hours_decimal)) * 60)
-    s = int((((hours_decimal - int(hours_decimal)) * 60) - m) * 60)
-    return f"{h:02d}:{m:02d}:{s:02d}"
 
-
-# =============================================================================
-# ORTO / OCASO LUNAR (tu función original, sólo hora)
-# =============================================================================
-def fenoluna(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
+def get_moon_zenith_target_opt(ra_rad, de_rad, dist_au, fi_rad, jd_ut1, lon_deg):
     """
-    Calcula orto/ocaso de la Luna para un día y lugar dados.
+    Calcula la distancia cenital geométrica y las correcciones del fenómeno lunar.
 
-    Parámetros
-    ----------
-    dj_ut : float
-        Día Juliano UT de la medianoche del día (ts.utc(Y,M,D,0).ut1).
-    latitud_grad : float
-        Latitud geográfica (grados, Norte positivo).
-    fenomeno : str
-        'ort' → orto; 'oca' → ocaso.
-    longitud_grad : float
-        Longitud geográfica (grados, Este positivo; Oeste negativo).
+    Args:
+        ra_rad (float): Ascensión Recta aparente en radianes.
+        de_rad (float): Declinación aparente en radianes.
+        dist_au (float): Distancia Tierra-Luna en Unidades Astronómicas.
+        fi_rad (float): Latitud del observador en radianes.
+        jd_ut1 (float): Fecha Juliana UT1 para el cálculo del Tiempo Sideral.
+        lon_deg (float): Longitud del observador en grados.
 
-    Retorno
-    -------
-    float
-        Hora en UT (0–24). Si no hay fenómeno ese día → 9999.0.
+    Returns:
+        tuple: (a0, sd_luna, pi_luna)
+               - a0: Distancia cenital calculada (topocéntrica).
+               - sd_luna: Semidiámetro angular de la Luna.
+               - pi_luna: Paralaje horizontal ecuatorial.
     """
-    fen = fenomeno.lower()
-    if fen not in EVENTO_SUBIDA:
-        raise ValueError("Fenómeno lunar no reconocido. Usa 'ort' u 'oca'.")
+    # 1. Obtención del Tiempo Sideral Local y Ángulo Horario (HA)
+    lst_hours = read.sidereal_time(jd_ut1, lon_deg)
+    ha_rad = radians(lst_hours * 15.0) - ra_rad
+    
+    # 2. Resolución del triángulo de posición (Distancia cenital a0)
+    # Se realiza 'inlining' de la fórmula del coseno para máxima velocidad.
+    cos_zenit = (sin(fi_rad) * sin(de_rad) + 
+                 cos(fi_rad) * cos(de_rad) * cos(ha_rad))
+    a0 = acos(max(-1.0, min(1.0, cos_zenit)))
+    
+    # 3. Cálculo de Semidiámetro y Paralaje
+    # La Luna requiere estas correcciones debido a su proximidad a la Tierra.
+    sd_luna = atan(REL_AU_RATIO / dist_au)
+    pi_luna = asin(RET_AU_RATIO / dist_au)
+    
+    return a0, sd_luna, pi_luna
 
-    # 1. Intervalo temporal de búsqueda (48 h alrededor del día)
-    t0 = lee.get_time_obj(dj_ut - 0.5, scale="ut1")  # 12 h antes
-    t1 = lee.get_time_obj(dj_ut + 1.5, scale="ut1")  # 36 h después
-
-    # 2. Observador y cuerpos
-    tierra = coordena.obtener_cuerpo(399)  # Tierra
-    luna = coordena.obtener_cuerpo(301)    # Luna
-
-    posicion_topos = wgs84.latlon(latitud_grad, longitud_grad)
-    observador = tierra + posicion_topos
-
-    # 3. Función de altitud dinámica
-    busca_subida = EVENTO_SUBIDA[fen]
-
-    def funcion_altitud_lunar(t):
-       # Altitud geométrica (sin refracción) de la Luna
-        # pressure_mbar=0 → sin refracción atmosférica
-        alt_geo, az_geo, dist_topo = observador.at(t).observe(luna).apparent().altaz(
-            temperature_C=0.0, pressure_mbar=0.0
-        )
-
-        # Distancia Luna–observador en km (array NumPy)
-        d_topo_km = dist_topo.km
-
-        # Semidiámetro angular (rad) = asin(R_moon / distancia)
-        ratio = np.minimum(1.0, R_MOON_KM / d_topo_km)
-        sd_rad = np.arcsin(ratio)
-        sd_deg = sd_rad * R2GR
-
-        # Umbral del CENTRO:
-        # h_centro > -(refracción + semidiámetro)
-        altitud_horizonte_centro = -(REFRACCION_HORIZONTE + sd_deg)
-
-        # Condición booleana: centro por encima del horizonte corregido
-        return alt_geo.degrees > altitud_horizonte_centro
-    # Paso de ~6 min (Luna se mueve rápido)
-    funcion_altitud_lunar.step_days = 1.0 / 2880.0
-
-    # 4. Buscar cambios de estado (debajo↔encima del horizonte)
-    times, values = find_discrete(t0, t1, funcion_altitud_lunar)
-
-    # Medianoche UT del día de cálculo
-    t_medianoche_ut = lee.get_time_obj(dj_ut, scale="ut1")
-
-    hora_encontrada = 9999.0
-
-    for t, is_above in zip(times, values):
-        fraccion_dia_ut = t.ut1 - t_medianoche_ut.ut1
-        hora = fraccion_dia_ut * 24.0  # puede ser <0 o >24
-
-        if busca_subida and is_above:
-            # Orto: pasa a estar por encima del horizonte
-            hora_encontrada = hora
-            if hora_encontrada > -0.5 / 24.0:
-                break
-
-        elif (not busca_subida) and (not is_above):
-            # Ocaso: pasa a estar por debajo del horizonte
-            hora_encontrada = hora
-            if hora_encontrada > -0.5 / 24.0:
-                break
-
-    # 5. Normalizar a 0–24 h
-    if hora_encontrada != 9999.0:
-        return hora_encontrada % 24.0
-    return hora_encontrada
-
-
-# =============================================================================
-# RETARDO DIARIO LUNAR R (columna R del Almanaque)
-# =============================================================================
-def retardo_lunar_R(dj_ut, latitud_grad, fenomeno, longitud_grad=0.0):
+def itera_luna_final(t_aprox, dj_base, fi_rad, lon_deg, dz0):
     """
-    Retardo diario lunar R (minutos) según la definición del Almanaque:
+    Refina la hora aproximada de un fenómeno lunar mediante el método de la secante.
+    
+    Este método es una alternativa al de Newton que no requiere derivadas,
+    convergiendo rápidamente (3-4 iteraciones) a la precisión del Almanaque Náutico.
 
-        HmI(x+1) = HmI(x) + R
+    Args:
+        t_aprox (float): Fracción de día estimada del fenómeno.
+        dj_base (float): Fecha Juliana (00h) del día de cálculo.
+        fi_rad (float): Latitud en radianes.
+        lon_deg (float): Longitud en grados.
+        dz0 (float): Distancia cenital objetivo (incluyendo refracción).
 
-    Es decir, R = H_mañana - H_hoy, en minutos.
+    Returns:
+        float: Hora decimal (0-24h) corregida del fenómeno.
     """
-    fen = fenomeno.lower()
-    if fen not in ("ort", "oca"):
-        raise ValueError("Fenómeno no válido en retardo_lunar_R: usa 'ort' u 'oca'.")
+    # Definición de límites y tolerancia (0.2 minutos convertidos a fracción de día)
+    u1 = dj_base + t_aprox
+    u0 = u1 - 0.0006944  # Punto inicial de apoyo: 1 minuto antes
+    eps = 0.0001388      # Umbral de precisión (~12 segundos)
+    
+    # Obtención de coordenadas para el primer punto (u0)
+    t0_obj = read.get_time_obj(u0, scale='ut1')
+    ra0, de0, dist0 = coor.equatorial_apparent(10, t0_obj)
+    a0, sd0, pi0 = get_moon_zenith_target_opt(ra0, de0, dist0, fi_rad, u0, lon_deg)
 
-    # Hora del fenómeno HOY y MAÑANA (en horas decimales)
-    h_hoy = fenoluna(dj_ut, latitud_grad, fen, longitud_grad)
-    h_maniana = fenoluna(dj_ut + 1.0, latitud_grad, fen, longitud_grad)
-
-    # Si falta alguno de los fenómenos, no hay R
-    if h_hoy == 9999.0 or h_maniana == 9999.0:
-        return None
-
-    # Diferencia en horas, normalizada a 0–24 h
-    delta_h = (h_maniana - h_hoy) % 24.0
-
-    # Pasar a minutos y redondear al minuto más cercano
-    # (usamos floor(x+0.5) para evitar rarezas de round())
-    delta_min = int(math.floor(delta_h * 60.0 + 0.5))
-
-    return delta_min
-
-
-
-
+    # Bucle de refinamiento
+    for _ in range(10):
+        t1_obj = read.get_time_obj(u1, scale='ut1')
+        ra1, de1, dist1 = coor.equatorial_apparent(10, t1_obj)
+        a1, sd1, pi1 = get_moon_zenith_target_opt(ra1, de1, dist1, fi_rad, u1, lon_deg)
+        
+        # Distancia cenital objetivo ajustada por la distancia instantánea Tierra-Luna
+        dz_target = dz0 + sd1 - pi1
+        
+        # Fórmula de la secante para hallar la raíz (donde a - dz_target = 0)
+        denom = a1 - a0
+        if abs(denom) < 1e-12: break
+        
+        u2 = u0 + (u1 - u0) * (dz_target - a0) / denom
+        
+        # Comprobación de convergencia
+        if abs(u2 - u1) < eps:
+            return (u2 - dj_base) * 24.0
+        
+        # Desplazamiento de variables para la siguiente iteración
+        u0, u1 = u1, u2
+        a0 = a1
+        
+    return (u1 - dj_base) * 24.0
 
 # =============================================================================
-# MAIN DE PRUEBA
+# IMPLEMENTACIÓN VECTORIZADA (ALTO RENDIMIENTO)
 # =============================================================================
-if __name__ == "__main__":
-    print(">>> Ejecutando ortoocasoluna.py (__main__)")
 
-    # EJEMPLO: JUEVES 6 DE SEPTIEMBRE DE 2012
-    YEAR = 2012
-    MONTH = 9
-    DAY = 6
-    LAT_TEST = 58.0   # cambia aquí la latitud (50, 54, etc.) para comparar con el AN
-    LON_TEST = 0.0    # Greenwich
+def fenoluna(dj, lat_deg, fen='ort', lon_deg=0.0):
+    """
+    Calcula la hora del orto u ocaso lunar para un día y posición geográfica.
+    
+    EQUIVALENCIA FORTRAN: Reemplaza a FENOLUN.
+    
+    ESTRATEGIA: Utiliza vectorización NumPy para calcular posiciones de todo el 
+    día en una sola operación, evitando el coste de E/S del archivo de efemérides.
 
-    ts = load.timescale()
-    t_start_utc = ts.utc(YEAR, MONTH, DAY, 0, 0, 0)
-    DJ_UT = t_start_utc.ut1  # Día juliano UT
+    Args:
+        dj (float): Fecha Juliana a las 00:00 UTC.
+        lat_deg (float): Latitud decimal (+N / -S).
+        fen (str): 'ort' para orto, 'oca' para ocaso.
+        lon_deg (float): Longitud decimal (+E / -W).
 
-    print(f"\n--- Resultado de la prueba fenoluna ---")
-    print(f"Fecha:   {YEAR}-{MONTH:02d}-{DAY:02d}")
-    print(f"Latitud: {LAT_TEST}°")
-    print(f"Longitud:{LON_TEST}°")
-    print("-" * 40)
+    Returns:
+        float: Hora UTC decimal (0-24h). Retorna 9999.0 si no hay fenómeno.
+    """
+    fi_rad = radians(lat_deg)
+    # dz0 = 90° 34' (Radio terrestre + refracción estándar en el horizonte)
+    dz0 = 1.580686525889531153 
+    
+    # Dirección del fenómeno (Orto: altura aumenta | Ocaso: altura disminuye)
+    sgn = -1 if fen == 'ort' else 1
 
-    try:
-        # ORTO
-        hora_orto = fenoluna(DJ_UT, LAT_TEST, "ort", LON_TEST)
-        R_orto = retardo_lunar_R(DJ_UT, LAT_TEST, "ort", LON_TEST)
+    # 1. GENERACIÓN VECTORIZADA DE DATOS
+    # Generamos 52 puntos cubriendo desde poco antes de las 00h hasta después de las 24h.
+    # Esto permite detectar fenómenos en los bordes del día.
+    pasos = np.linspace(-0.02, 1.05, 52) 
+    tiempos_jd = dj + pasos
+    
+    # Obtención masiva de efemérides (Altamente optimizado en Skyfield)
+    t_objs = read.get_time_obj(tiempos_jd, scale='ut1')
+    ras, des, dists = coor.equatorial_apparent(10, t_objs) # 10 = Luna
+    
+    # 2. PROCESAMIENTO MATEMÁTICO VECTORIZADO
+    # Calculamos Tiempo Sideral para cada punto del array.
+    lst_hours = np.array([read.sidereal_time(t, lon_deg) for t in tiempos_jd])
+    ha_rads = np.radians(lst_hours * 15.0) - ras
+    
+    # Cálculo masivo de distancias cenitales (a_puntos) mediante NumPy
+    cos_zenits = (sin(fi_rad) * np.sin(des) + 
+                  cos(fi_rad) * np.cos(des) * np.cos(ha_rads))
+    a_puntos = np.arccos(np.clip(cos_zenits, -1.0, 1.0))
+    
+    # Correcciones vectorizadas
+    sds = np.arctan(REL_AU_RATIO / dists)
+    pis = np.asin(RET_AU_RATIO / dists)
+    
+    # 'difs' representa la distancia al horizonte corregida. 
+    # Un cambio de signo en 'difs' indica el cruce del horizonte (fenómeno).
+    difs = sgn * ((dz0 + sds - pis) - a_puntos)
 
-        print("Orto  (rise):", format_hms(hora_orto),
-              f" ({hora_orto:.6f} h)" if hora_orto != 9999.0 else "")
-        if R_orto is not None:
-            print(f"    R (retardo diario): {R_orto:d} min")
+    # 3. IDENTIFICACIÓN DEL CRUCE DE HORIZONTE
+    # Se detecta el índice donde la curva cruza el valor cero.
+    cruces = np.where((difs[:-1] >= 0) & (difs[1:] <= 0))[0]
 
-        # OCASO
-        hora_ocaso = fenoluna(DJ_UT, LAT_TEST, "oca", LON_TEST)
-        R_ocaso = retardo_lunar_R(DJ_UT, LAT_TEST, "oca", LON_TEST)
+    if len(cruces) == 0:
+        return 9999.0
 
-        print("Ocaso (set): ", format_hms(hora_ocaso),
-              f" ({hora_ocaso:.6f} h)" if hora_ocaso != 9999.0 else "")
-        if R_ocaso is not None:
-            print(f"    R (retardo diario): {R_ocaso:d} min")
+    # LÓGICA DE SALTO LUNAR: 
+    # Debido a que la Luna atrasa ~50 min/día, podemos encontrar el fenómeno
+    # del día anterior justo antes de medianoche. Filtramos para asegurar que
+    # devolvemos el fenómeno perteneciente al día solicitado o el más cercano válido.
+    t_aprox = None
+    for idx in cruces:
+        t_posible = pasos[idx+1]
+        # Umbral: -0.5 minutos (-0.00833 horas)
+        if t_posible * 24.0 > -0.00833:
+            t_aprox = t_posible
+            break
+    
+    if t_aprox is None:
+        return 9999.0
 
-    except ImportError as e:
-        print("\nFALLO CRÍTICO: Error de importación.")
-        print(f"Detalle: {e}")
-    except Exception as e:
-        print(f"Error inesperado durante el cálculo: {e}")
+    # 4. REFINAMIENTO POR INTERPOLACIÓN
+    # Con el intervalo detectado, se calcula el segundo exacto.
+    return itera_luna_final(t_aprox, dj, fi_rad, lon_deg, dz0)
