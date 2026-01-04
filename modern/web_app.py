@@ -177,8 +177,8 @@ with col2:
             if run_luna and LUNA_AVAILABLE:
                 st.write(f"Calculando Fases de la Luna (Año {year})...")
                 if delta_t_type != "Manual": 
-                    from src.utils.read_de440 import _ts
-                    delta_t_val = _ts.utc(year, 1, 1).delta_t
+                    from src.utils.read_de440 import get_delta_t
+                    delta_t_val = get_delta_t(year)
                 try:
                     path_fase_luna = FasesDeLaLunaLatex(ano=year,
                                                         dt_in=delta_t_val
