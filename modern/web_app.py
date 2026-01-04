@@ -178,7 +178,7 @@ with col2:
                 st.write(f"Calculando Fases de la Luna (Año {year})...")
                 try:
                     path_fase_luna = FasesDeLaLunaLatex(ano=year,
-                                                        valor_delta_t_manual=delta_t_val
+                                                        dt_in=delta_t_val
                                                         )
                     
                     # Evitar duplicar ruta si es la misma
