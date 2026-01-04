@@ -366,6 +366,8 @@ def FasesDeLaLunaLatex(ano, dt_in):
     except Exception as e:
         print(f"Error escribiendo archivo: {e}")
 
+    return str(filename.parent)
+
 # =============================================================================
 # FUNCIÓN PRINCIPAL 2: GENERADOR DE DATOS NUMÉRICOS (Formato Fortran)
 # =============================================================================
