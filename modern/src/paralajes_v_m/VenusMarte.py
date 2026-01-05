@@ -259,7 +259,7 @@ def calculo_paralaje(anio:int, dT:int):
 
         archivo_salida.write(lineaFinal + "\n")
 
-    print(f"Archivo '{archivo_datos}' generado con exitosamente.")
+    return str(ruta_carpeta_datos)      #devolvemos, en formato cadena, el directorio del .dat generado
 
 """""
 #Prueba de generación
