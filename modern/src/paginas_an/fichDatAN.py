@@ -102,7 +102,7 @@ def generarFichero(anio: int, dt: int, opcion: int = 1):
     """""
 
     #iniciamos un cronometro
-    iniCrono = time.perf_counter()
+    # iniCrono = time.perf_counter()
 
     """""
     En base a la opción que elija el usuario, se realizan los siguientes casos:
@@ -239,12 +239,14 @@ def generarFichero(anio: int, dt: int, opcion: int = 1):
                 diaActual = diaAnIni + i
                 UNAPAG(diaActual, anioIni, dt)     #generamos la página
 
-    #mostramos por pantalla el tiempo en minutos que ha tardado el proceso
-    finCrono = time.perf_counter()
-    tiempoTotal = finCrono - iniCrono
+    return str(ruta_final)      #devolvemos en formato de cadena, la ruta del directorio de nuestro fichero latex
 
-    print(f"\nProceso completado.\n")
-    print(f"Tiempo en minutos = {tiempoTotal / 60.0:.4f}")
+    #mostramos por pantalla el tiempo en minutos que ha tardado el proceso
+    # finCrono = time.perf_counter()
+    # tiempoTotal = finCrono - iniCrono
+
+    # print(f"\nProceso completado.\n")
+    # print(f"Tiempo en minutos = {tiempoTotal / 60.0:.4f}")
 """""
 #Prueba de generación
 if __name__ == "__main__":
