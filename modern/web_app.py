@@ -114,7 +114,7 @@ with st.sidebar:
     tipo_dt_backend = 'manual' if delta_t_type == "Manual" else 'auto'
 
     st.markdown("---")
-    st.caption("Version: Modern Python 3 (Dockerized)")
+    
 
 # =============================================================================
 # 4. ÁREA PRINCIPAL
@@ -128,15 +128,20 @@ with col1:
     select_all = st.checkbox("Seleccionar Todos los Módulos", value=True)
     st.markdown("---") # Pequeña linea separadora
 
+    # --- Módulo Fichero DAT ---
+    run_fichero_dat = st.checkbox("Páginas Anuales", value=select_all, disabled=not FICHERODAT_AVAILABLE)
+    if not FICHERODAT_AVAILABLE:
+        st.error("Datos del año no encontrado en src/")
+
     # --- Módulo Estrellas ---
     # El valor por defecto ahora depende de 'select_all'
-    run_stars = st.checkbox("Estrellas (Pag 376-381)", value=select_all, disabled=not ESTRELLAS_AVAILABLE)
+    run_stars = st.checkbox("Estrellas", value=select_all, disabled=not ESTRELLAS_AVAILABLE)
     
     if not ESTRELLAS_AVAILABLE:
         st.error("Módulo Estrellas no encontrado en src/")
             
     # --- Módulo Polar ---
-    run_polar = st.checkbox("Polar (Pag 382-385)", value=select_all, disabled=not POLAR_AVAILABLE)
+    run_polar = st.checkbox("Polar", value=select_all, disabled=not POLAR_AVAILABLE)
     if not POLAR_AVAILABLE:
         st.error("Modulo Polar no encontrado en src/")
 
@@ -145,10 +150,6 @@ with col1:
     if not LUNA_AVAILABLE:
         st.error("Módulo Fase de la Luna no encontrado en src/")
     
-    # --- Módulo Fichero DAT ---
-    run_fichero_dat = st.checkbox("Datos del año", value=select_all, disabled=not FICHERODAT_AVAILABLE)
-    if not FICHERODAT_AVAILABLE:
-        st.error("Datos del año no encontrado en src/")
 
     # --- Módulo Paralajes Venus y Marte ---
     run_paralajes = st.checkbox("Paralajes de Venus y Marte", value=select_all, disabled=not PARALAJES_AVAILABLE)

@@ -3,11 +3,9 @@ import shutil   #eficiente para copiar de archivos
 import time     #eficiente para medidas de tiempo
 from pathlib import Path
 
-
-#importamos las funciones necesarias de este mismo módulo
-from pagEntera import UNAPAG
-from pagLatex import PagTexProcessor
-
+# =============================================================================
+# 1. CONFIGURACIÓN DE RUTAS (MOVIDO AL PRINCIPIO PARA EVITAR ERRORES)
+# =============================================================================
 #obtenemos la ruta absoluta de ESTE fichero
 ruta_fichDatAN = Path(__file__).resolve()
 
@@ -17,21 +15,15 @@ ruta_paginas_an = ruta_fichDatAN.parent
 #obtenemos la ruta padre tanto de paginas_an como de utils, es decir, src
 ruta_Padre = ruta_paginas_an.parent
 
-"""""
-Por último, importamos la carpeta padre en el sys.path
-Esto hará que Python, al buscar módulos, también busque
-en esta.
-Hay que transformarlo a string ya que sys.path es una 
-lista de strings
-"""""
+# Añadimos paginas_an al path
+if str(ruta_paginas_an) not in sys.path:
+    sys.path.append(str(ruta_paginas_an))
+
+# Añadimos src al path
 if str(ruta_Padre) not in sys.path:
     sys.path.append(str(ruta_Padre))
 
-# =============================================================================
-# CONFIGURACIÓN DE RUTAS E IMPORTACIONES
-# =============================================================================
 # Este bloque asegura que Python pueda encontrar los módulos propios del proyecto
-# aunque el script se ejecute desde una carpeta distinta.
 try:
     ruta_base = Path(__file__).resolve().parent.parent
 except NameError:
@@ -41,16 +33,28 @@ ruta_str = str(ruta_base)
 if ruta_str not in sys.path:
     sys.path.append(ruta_str)
 
+# =============================================================================
+# 2. IMPORTACIONES (AHORA QUE LAS RUTAS ESTÁN LISTAS)
+# =============================================================================
+#importamos las funciones necesarias de este mismo módulo
+try:
+    from pagEntera import UNAPAG
+    from pagLatex import PagTexProcessor
+except ImportError:
+    # Fallback por si acaso
+    from src.paginas_an.pagEntera import UNAPAG
+    from src.paginas_an.pagLatex import PagTexProcessor
+
 try:
     # Importación de librerías astronómicas propias (dependencias externas)
-    # fun: utilidades de fecha (Conversión Gregoriano <-> Juliano)
-    # _ts: escala de tiempo para posiciones planetarias
     from utils import funciones 
     from fase_luna import faseLuna
 except ImportError as e:
-    # Si faltan las librerías, el programa fallará al llamar a las funciones de cálculo,
-    # pero permite cargar el script para revisión de código.
     pass
+
+# =============================================================================
+# 3. FUNCIONES
+# =============================================================================
 
 """""
 Cabecera: IDIAAN(dia: int, mes: int, anio: int) -> int
@@ -68,24 +72,20 @@ def IDIAAN(dia: int, mes: int, anio: int) -> int:
 Cabecera: generarFichero(anio: int, dt: int, opcion = 1)
 Precondición: recibe un año, un delta y una opción (por defecto, generar el año completo)
 Postcondición: genera el fichero final con todos los resultados
-
-generarFichero() es la función principal del módulo PaginasAN, este
-es el cerebro de todo, en el que llama a todas las funciones de este
-para generar las páginas finales con todos los resultados tras realizar
-los distintos cálculos del resto de módulos
 """""
 def generarFichero(anio: int, dt: float, opcion: int = 1):
     
+    # Inicializamos ruta_final para el return
+    ruta_final = Path("")
+
     #comprobamos la opción elegida por el usuario
     while True:
         try:
-
             if opcion in [1,2,3]:
                 break
             else:
                 print("Error, opción inválida.\n")
                 opcion = int(input("Introduzca su opción (1,2 o 3): "))
-
         except ValueError:
             print("Error, escriba un valor válido.\n")
 
@@ -93,32 +93,16 @@ def generarFichero(anio: int, dt: float, opcion: int = 1):
     #obtenemos la ruta de los datos
     ruta_datos = ruta_Padre.parent.parent / "data" / "almanaque_nautico"
 
-    """""
-    leemos el fichero PAG.DAT, en el cual es el que se escribe una página entera,
-    este archivo se crea en el fichero "paginaEntera.py", en el que escribe en 
-    PAG.DAT todos los datos de una única página. En este fichero lo que haremos es
-    leer este fichero "intermedio", y cuando "paginaEntera" haga su función, copiamos
-    los datos obtenidos en el fichero final en el que se encontrarán las 366 páginas
-    """""
-
     #iniciamos un cronometro
     # iniCrono = time.perf_counter()
 
-    """""
-    En base a la opción que elija el usuario, se realizan los siguientes casos:
-    1: Generar el año completo
-    2: Generar en un día en concreto
-    3: Generar en un intervalo de días
-
-    Los casos 2 y 3 están pensados para ejecutarse de forma exclusiva en terminal, esto
-    para realizar pruebas de generación del fichero en caso de cambios o comprobaciones
-    puntuales. Mientras que el caso 1 está pensado para ejecutarse por defecto, luego
-    no es necesario pedir al usuario final la opción que desea, estas están para pruebas.
-    """""
     match opcion:
         case 1:     #Quiere prepararlo en un año en concreto
 
             ruta_final = ruta_datos / str(anio)
+            
+            # --- CAMBIO NECESARIO: Crear directorio si no existe ---
+            ruta_final.mkdir(parents=True, exist_ok=True)
 
             PagDat = ruta_final / "PAG.dat"
 
@@ -241,14 +225,7 @@ def generarFichero(anio: int, dt: float, opcion: int = 1):
 
     return str(ruta_final)      #devolvemos en formato de cadena, la ruta del directorio de nuestro fichero latex
 
-    #mostramos por pantalla el tiempo en minutos que ha tardado el proceso
-    # finCrono = time.perf_counter()
-    # tiempoTotal = finCrono - iniCrono
-
-    # print(f"\nProceso completado.\n")
-    # print(f"Tiempo en minutos = {tiempoTotal / 60.0:.4f}")
-"""""
-#Prueba de generación
-if __name__ == "__main__":
-    generarFichero(2013, 67)
-"""""
+"""
+if __name__ == "__main__": 
+    generarFichero(2015, 68)
+"""
