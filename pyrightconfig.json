@@ -1,0 +1,32 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "error",
+  "reportUndefinedVariable": "error",
+  "reportInvalidTypeForm": "error",
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "error",
+  "reportWildcardImportFromLibrary": "warning",
+  "reportAssertAlwaysTrue": "warning",
+  "reportSelfClsParameterName": "warning",
+  "reportConstantRedefinition": "none",
+  "reportDeprecated": "warning",
+  "reportGeneralTypeIssues": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportCallIssue": "none",
+  "reportArgumentType": "none",
+  "reportOperatorIssue": "none",
+  "reportIndexIssue": "none",
+  "reportOptionalSubscript": "none",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/legacy"
+  ]
+}
