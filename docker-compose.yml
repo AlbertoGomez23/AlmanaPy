@@ -2,18 +2,15 @@ version: '3.8'
 services:
   app:
     build: .
-    image: almanaque-app  # Usamos el nombre nuevo que definimos
-    #container_name: almanaque-container
-    
+    image: almanaque-app
+    container_name: almanaque-container
+
     ports:
       - "8501:8501"
 
     volumes:
       - .:/app
-      # Estos volúmenes evitan problemas con carpetas locales
       - /app/.venv
       - /app/venv
 
-    # AQUÍ ESTÁ EL CAMBIO CLAVE:
-    # Quitamos 'sleep infinity' y ponemos el comando de Streamlit
     command: streamlit run modern/web_app.py --server.port=8501 --server.address=0.0.0.0
