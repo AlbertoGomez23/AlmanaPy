@@ -112,8 +112,14 @@ with st.sidebar:
             help="Valor en segundos. Rango permitido: 0 - 150"
         )
     else:
+        # Importamos y calculamos el valor
         from src.utils.read_de440 import get_delta_t
         delta_t_val = get_delta_t(year)
+        
+        # --- CUADRITO INFORMATIVO ---
+        st.info(f"**\u0394T calculado** = {delta_t_val:.5f} s")
+        # Alternativa más visual (opcional):
+        # st.metric(label="Delta T Automático", value=f"{delta_t_val:.2f} s")
     
     st.markdown("---")
 
@@ -123,50 +129,97 @@ with st.sidebar:
 # =============================================================================
 col1, col2 = st.columns([1, 2])
 
+# Inicializar el estado de los checkboxes si no existen
+if 'select_all' not in st.session_state:
+    st.session_state.select_all = True
+    st.session_state.run_fichero_dat = True
+    st.session_state.run_stars = True
+    st.session_state.run_polar = True
+    st.session_state.run_luna = True
+    st.session_state.run_paralajes = True
+    st.session_state.run_uso_anio = True
+
+# 1. Definir una función para manejar el cambio en los hijos
+def check_individual():
+    # Lista de los estados de todos los módulos
+    estados = [
+        st.session_state.get('run_fichero_dat', True),
+        st.session_state.get('run_stars', True),
+        st.session_state.get('run_polar', True),
+        st.session_state.get('run_luna', True),
+        st.session_state.get('run_paralajes', True),
+        st.session_state.get('run_uso_anio', True)
+    ]
+    # Si alguno es falso, desactivamos el "Seleccionar Todos"
+    if not all(estados):
+        st.session_state.select_all = False
+    # Opcional: Si todos vuelven a estar marcados, marcar "Seleccionar Todos"
+    elif all(estados):
+        st.session_state.select_all = True
+
+# 2. Definir una función para manejar el cambio en el "Seleccionar Todos"
+def check_all():
+    val = st.session_state.select_all
+    st.session_state.run_fichero_dat = val
+    st.session_state.run_stars = val
+    st.session_state.run_polar = val
+    st.session_state.run_luna = val
+    st.session_state.run_paralajes = val
+    st.session_state.run_uso_anio = val
+
+# --- DENTRO DE COL1 ---
 with col1:
     st.subheader("Módulos a Calcular")
 
-    # --- CHECKBOX MAESTRO (SELECCIONAR TODO) ---
-    select_all = st.checkbox("Seleccionar Todos los Módulos", value=True)
-    st.markdown("---")  # Pequeña linea separadora
+    # Checkbox Maestro
+    st.checkbox("Seleccionar Todos los Módulos", 
+                key="select_all", 
+                on_change=check_all)
+    
+    st.markdown("---")
 
-    # --- Módulo Fichero DAT ---
+    # Módulos individuales con su propia KEY y el evento ON_CHANGE
     run_fichero_dat = st.checkbox(
-        "Páginas Anuales", value=select_all, disabled=not FICHERODAT_AVAILABLE)
-    if not FICHERODAT_AVAILABLE:
-        st.error("Datos del año no encontrado en src/")
+        "Páginas Anuales", 
+        key="run_fichero_dat", 
+        disabled=not FICHERODAT_AVAILABLE,
+        on_change=check_individual
+    )
 
-    # --- Módulo Estrellas ---
-    # El valor por defecto ahora depende de 'select_all'
-    run_stars = st.checkbox("Estrellas", value=select_all,
-                            disabled=not ESTRELLAS_AVAILABLE)
+    run_stars = st.checkbox(
+        "Estrellas", 
+        key="run_stars",
+        disabled=not ESTRELLAS_AVAILABLE,
+        on_change=check_individual
+    )
 
-    if not ESTRELLAS_AVAILABLE:
-        st.error("Módulo Estrellas no encontrado en src/")
+    run_polar = st.checkbox(
+        "Polar", 
+        key="run_polar",
+        disabled=not POLAR_AVAILABLE,
+        on_change=check_individual
+    )
 
-    # --- Módulo Polar ---
-    run_polar = st.checkbox("Polar", value=select_all,
-                            disabled=not POLAR_AVAILABLE)
-    if not POLAR_AVAILABLE:
-        st.error("Modulo Polar no encontrado en src/")
-
-    # --- Módulo FaseLuna ---
     run_luna = st.checkbox(
-        "Fases de la Luna", value=select_all, disabled=not LUNA_AVAILABLE)
-    if not LUNA_AVAILABLE:
-        st.error("Módulo Fase de la Luna no encontrado en src/")
+        "Fases de la Luna", 
+        key="run_luna", 
+        disabled=not LUNA_AVAILABLE,
+        on_change=check_individual
+    )
 
-    # --- Módulo Paralajes Venus y Marte ---
     run_paralajes = st.checkbox(
-        "Paralajes de Venus y Marte", value=select_all, disabled=not PARALAJES_AVAILABLE)
-    if not PARALAJES_AVAILABLE:
-        st.error("Módulo Paralajes de Venus y Marte no encontrado en src/")
+        "Paralajes de Venus y Marte", 
+        key="run_paralajes", 
+        disabled=not PARALAJES_AVAILABLE,
+        on_change=check_individual
+    )
 
-    # --- Módulo Uso Año Siguiente ---
     run_uso_anio = st.checkbox(
-        "Uso Año Siguiente", value=select_all, disabled=not USO_ANIO_SIGUIENTE_AVAILABLE)
-    if not USO_ANIO_SIGUIENTE_AVAILABLE:
-        st.error("Módulo Uso Año Siguiente no encontrado en src/")
+        "Uso Año Siguiente", 
+        key="run_uso_anio", 
+        disabled=not USO_ANIO_SIGUIENTE_AVAILABLE,
+        on_change=check_individual
+    )
 
 with col2:
     st.subheader("Generación y Resultados")
@@ -179,8 +232,7 @@ with col2:
         # Calculamos dónde van a acabar los datos (src/../data/almanaque_nautico/AÑO)
         base_output_dir = src_path.parent.parent / "data" / "almanaque_nautico" / str(year)
         
-        # Si la carpeta ya existe, LA BORRAMOS entera. 
-        # Esto soluciona tu problema de que "se trae lo de antes".
+        # Si la carpeta ya existe, LA BORRAMOS entera.
         if base_output_dir.exists():
             try:
                 shutil.rmtree(base_output_dir)
