@@ -175,6 +175,21 @@ with col2:
         "Generar Almanaque", type="primary", use_container_width=True)
 
     if generate_btn:
+        # --- Definir ruta y LIMPIAR ANTES de calcular ---
+        # Calculamos dónde van a acabar los datos (src/../data/almanaque_nautico/AÑO)
+        base_output_dir = src_path.parent.parent / "data" / "almanaque_nautico" / str(year)
+        
+        # Si la carpeta ya existe, LA BORRAMOS entera. 
+        # Esto soluciona tu problema de que "se trae lo de antes".
+        if base_output_dir.exists():
+            try:
+                shutil.rmtree(base_output_dir)
+            except Exception as e:
+                st.error(f"No se pudo limpiar el directorio anterior: {e}")
+                st.stop()
+        
+        # Volvemos a crear la carpeta limpia
+        base_output_dir.mkdir(parents=True, exist_ok=True)
         output_paths = []
 
         # Contenedor de estado
