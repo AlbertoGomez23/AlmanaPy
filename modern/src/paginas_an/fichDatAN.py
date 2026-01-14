@@ -1,6 +1,5 @@
-import sys, os
+import sys
 import shutil   #eficiente para copiar de archivos
-import time     #eficiente para medidas de tiempo
 from pathlib import Path
 
 # =============================================================================

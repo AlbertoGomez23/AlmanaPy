@@ -225,7 +225,7 @@ def calculo_paralaje(anio:int, dT: float):
             if diaActual != diaPrevio:
 
                 #convertimos el Día juliano anterior a fecha legible
-                dia, mes, anioCalculado, hora = funciones.DJADia(dJuliano - 1)
+                dia, mes, _anioCalculado, _hora = funciones.DJADia(dJuliano - 1)
 
                 #actualizamos el valor de diaPrevio con el valor de diaActual para la siguiente iteración
                 diaPrevio = diaActual

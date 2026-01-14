@@ -1,6 +1,4 @@
 # src/estrellas/calculos.py
-import sys
-import numpy as np
 from skyfield.api import Star
 # Importamos el módulo completo para acceder a load_data y a la variable actualizada
 from utils import read_de440 
@@ -28,13 +26,12 @@ def cargar_catalogo(ruta_fichero):
     Lee el fichero estANFKH.txt o estAN_UH.txt y crea objetos Star de Skyfield.
     """
     catalogo = []
-    aviso_mostrado = False
     
     try:
         with open(ruta_fichero, 'r') as f:
             lineas = f.readlines()
             
-        for k, linea in enumerate(lineas):
+        for _k, linea in enumerate(lineas):
             parts = linea.split()
             if not parts: continue
             

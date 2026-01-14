@@ -1,11 +1,7 @@
-
-import time
 import numpy as np
-import sys, os
+import sys
 from pathlib import Path
-from datetime import datetime, timedelta
-from skyfield.api import load, wgs84
-from skyfield import almanac
+from skyfield.api import load
 from skyfield.magnitudelib import planetary_magnitude
 
 #obtenemos la ruta absoluta de ESTE fichero
@@ -51,7 +47,6 @@ from constants import *
 from ortoocasoluna import fenoluna#, retardo_lunar_R
 from skyfield.searchlib import find_discrete
 from ortoocasol import fenosol
-from magnit import magnit
 
 """""
 Por último, importamos la carpeta padre en el sys.path
@@ -322,7 +317,7 @@ def Paso_Mer(jdInicio, cuerpo, dt):
 
     meridian_condition.step_days = 0.04
 
-    tiempos, valores = find_discrete(t0,t1,meridian_condition)
+    tiempos, _valores = find_discrete(t0,t1,meridian_condition)
 
     #hay un momento en el que el astro cruzó el meridiano
     if len(tiempos) > 0:
@@ -389,9 +384,6 @@ def UNAPAG(da, annio, dt):
     fichero_salida.parent.mkdir(parents=True, exist_ok=True)
 
     #creamos variables de estado para la interpolación
-    hgg = [0]*4; hgm = [0.0]*4
-    deg = [0]*4; dem = [0.0]*4
-    sgn = ['']*8
     org = [0]*6; orm = [0]*6
 
     err = 0.05      #tolerancia de redondeo
@@ -546,10 +538,6 @@ def UNAPAG(da, annio, dt):
 
             hgg_lun, hgm_lun = formato_grado_minuto(gh_lun_deg, 0.05)
             sgn_lun, deg_lun, dem_lun = formato_signo_grado_minuto(dec_lun_deg, 0.05)
-
-            # --- LÓGICA DE INTERPOLACIÓN 'v' y 'd' ---
-            str_v = 0
-            str_d = 0
 
             # La lógica original usaba prev_gha. Al estar vectorizado, el "previo" es el índice i-1
             if i > 0:

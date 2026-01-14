@@ -137,7 +137,7 @@ def fenosol(jd, latitud_grad, fenomeno, longitud_grad=0.0):
         Skyfield usa esto para encontrar los cruces (cambios de estado).
         """
         # Calcular posición aparente (incluye aberración y deflexión de luz)
-        alt, az, dist = observador.at(t).observe(sol).apparent().altaz()
+        alt, _az, _dist = observador.at(t).observe(sol).apparent().altaz()
         return alt.degrees > altura_objetivo
 
     # Paso inicial de búsqueda optimizado (aprox 1 hora)

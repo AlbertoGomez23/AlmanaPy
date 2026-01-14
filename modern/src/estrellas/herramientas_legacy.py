@@ -1,5 +1,4 @@
 # src/estrellas/herramientas_legacy.py
-import math
 
 """
 MÓDULO DE HERRAMIENTAS LEGACY

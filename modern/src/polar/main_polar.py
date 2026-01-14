@@ -1,9 +1,7 @@
 import math
-import numpy as np
-import os
 import sys
 from pathlib import Path
-from skyfield.api import Star, Angle
+from skyfield.api import Star
 # Importamos la utilidad de Skyfield compartida
 from utils import read_de440
 # =============================================================================
@@ -134,7 +132,6 @@ def generar_datos_polar(ano, valor_delta_t):
     # =========================================================================
     
     u = [""] * 53
-    h = [0.0] * 7
 
     # Generación de datos brutos PARTE 1 (0 a 52)
     for k in range(0, 53):
@@ -515,7 +512,6 @@ def main():
     # =========================================================================
     
     u = [""] * 53
-    h = [0.0] * 7
 
     # Generación de datos brutos PARTE 1 (0 a 52)
     for k in range(0, 53):

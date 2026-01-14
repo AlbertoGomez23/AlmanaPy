@@ -55,7 +55,7 @@ def SemiDiametroSol(ano, dT):
     
     POSTCONDICIÓN:  Genera un archivo 'AN<Año>387B.dat'.
                     El contenido está formateado con sintaxis LaTeX específica 
-                    (ej: columnas &, saltos \\, macros \Minp).
+                    (ej: columnas &, saltos \\, macros \\Minp).
     """
 
     # --- CONSTANTES ---
@@ -153,7 +153,7 @@ def SemiDiametroSol(ano, dT):
             # Recuperar fecha civil (día, mes) del día anterior (dj - 1)
             # Se usa dj-1 porque detectamos el cambio hoy, pero el periodo 
             # válido del valor anterior terminó ayer.
-            dia, mes, anno2, hora = fun.DJADia(dj - 1)
+            dia, mes, _anno2, _hora = fun.DJADia(dj - 1)
 
             # Actualizar valores de referencia
             c04 = c4

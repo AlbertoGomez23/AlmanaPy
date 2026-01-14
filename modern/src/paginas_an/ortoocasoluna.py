@@ -99,7 +99,7 @@ def itera_luna_final(t_aprox, dj_base, fi_rad, lon_deg, dz0):
     # Obtención de coordenadas para el primer punto (u0)
     t0_obj = read.get_time_obj(u0, scale='ut1')
     ra0, de0, dist0 = coor.equatorial_apparent(10, t0_obj)
-    a0, sd0, pi0 = get_moon_zenith_target_opt(ra0, de0, dist0, fi_rad, u0, lon_deg)
+    a0, _sd0, _pi0 = get_moon_zenith_target_opt(ra0, de0, dist0, fi_rad, u0, lon_deg)
 
     # Bucle de refinamiento
     for _ in range(10):

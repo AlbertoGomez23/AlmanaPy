@@ -206,7 +206,6 @@ def generar_datos_estrellas(ano, valor_delta_t):
         lll[idx] = l[val-1]
 
     # 1. Configuración de fecha y fichero según MODO
-    dt = valor_delta_t
     dia_mes1 = 1
     fichero_cat1 = "estAN_UH.txt"
     num_estrellas1 = 50
@@ -337,7 +336,7 @@ def generar_datos_estrellas(ano, valor_delta_t):
             if al_SHA < 0:
                 al_SHA += 2.0*PI
 
-            sgn, gg, mmm = SIGRMI(dec_rad, ERR_REDONDEO)
+            _sgn, gg, mmm = SIGRMI(dec_rad, ERR_REDONDEO)
             gr2[k] = gg
             mi2[k] = mmm
 
@@ -355,7 +354,7 @@ def generar_datos_estrellas(ano, valor_delta_t):
             v_str += f"{mi1[k]:6.1f}"
         v[n] = v_str
 
-        ra_dummy, dec_dummy = calcular_posicion_aparente(
+        _ra_dummy, dec_dummy = calcular_posicion_aparente(
             dia_juliano_simple(dia_mes2, 1, ano), estrella.skyfield_star)
         sgn_0, _, _ = SIGRMI(dec_dummy, ERR_REDONDEO)
 
@@ -824,7 +823,7 @@ def main():
                 if al_SHA < 0:
                     al_SHA += 2.0*PI
 
-                sgn, gg, mmm = SIGRMI(dec_rad, ERR_REDONDEO)
+                _sgn, gg, mmm = SIGRMI(dec_rad, ERR_REDONDEO)
                 gr2[k] = gg
                 mi2[k] = mmm
 
@@ -850,7 +849,7 @@ def main():
                 v_str += f"{mi1[k]:6.1f}"
             v[n] = v_str
 
-            ra_dummy, dec_dummy = calcular_posicion_aparente(
+            _ra_dummy, dec_dummy = calcular_posicion_aparente(
                 dia_juliano_simple(dia_mes, 1, ano), estrella.skyfield_star)
             sgn_0, _, _ = SIGRMI(dec_dummy, ERR_REDONDEO)
 

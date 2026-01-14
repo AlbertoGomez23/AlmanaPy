@@ -57,8 +57,8 @@ def cual_fase(tt_jd):
     sol = 11 # Identificador numérico del Sol (JPL DE440)
     
     # 2. Obtener coordenadas eclípticas aparentes (Longitud, Latitud, Radio)
-    lel, la_lun, r_lun = coor.ecliptic_apparent(lun, t_skyfield)
-    les, la_sol, r_sol = coor.ecliptic_apparent(sol, t_skyfield)
+    lel, _la_lun, _r_lun = coor.ecliptic_apparent(lun, t_skyfield)
+    les, _la_sol, _r_sol = coor.ecliptic_apparent(sol, t_skyfield)
 
     # 3. Calcular la elongación (Ángulo Luna - Sol) normalizado a [0, 2PI]
     cpi = math.pi
@@ -100,14 +100,14 @@ def fase_newt(t_val, dt, fi, dif):
     t1_obj = _ts.tt_jd(t1_val)
     
     # Posición en t - dt
-    lel, la, r = coor.ecliptic_apparent(lun, t0_obj)
-    les, la, r = coor.ecliptic_apparent(sol, t0_obj)
+    lel, _la, _r = coor.ecliptic_apparent(lun, t0_obj)
+    les, _la, _r = coor.ecliptic_apparent(sol, t0_obj)
     dif_local = (2.0 * cpi + les - lel + fi) % (2.0 * cpi)
     if dif_local > cpi: dif_local -= 2.0 * cpi
         
     # Posición en t + dt
-    lel, la, r = coor.ecliptic_apparent(lun, t1_obj)
-    les, la, r = coor.ecliptic_apparent(sol, t1_obj)
+    lel, _la, _r = coor.ecliptic_apparent(lun, t1_obj)
+    les, _la, _r = coor.ecliptic_apparent(sol, t1_obj)
     r_val = (2.0 * cpi + les - lel + fi) % (2.0 * cpi)
     if r_val > cpi: r_val -= 2.0 * cpi
         
@@ -119,8 +119,8 @@ def fase_newt(t_val, dt, fi, dif):
     # ---------------------------------------------------------
     # Evaluamos en el punto central t_val para obtener el error actual
     t_obj = _ts.tt_jd(t_val)
-    lel, la, r = coor.ecliptic_apparent(lun, t_obj)
-    les, la, r = coor.ecliptic_apparent(sol, t_obj)
+    lel, _la, _r = coor.ecliptic_apparent(lun, t_obj)
+    les, _la, _r = coor.ecliptic_apparent(sol, t_obj)
     
     dif_local = (2.0 * cpi + les - lel + fi) % (2.0 * cpi)
     if dif_local > cpi: dif_local -= 2.0 * cpi
@@ -138,8 +138,8 @@ def fase_newt(t_val, dt, fi, dif):
     # ---------------------------------------------------------
     # Calculamos qué tan cerca quedamos tras la corrección
     t_new_obj = _ts.tt_jd(t_new_val)
-    lel, la, r = coor.ecliptic_apparent(lun, t_new_obj)
-    les, la, r = coor.ecliptic_apparent(sol, t_new_obj)
+    lel, _la, _r = coor.ecliptic_apparent(lun, t_new_obj)
+    les, _la, _r = coor.ecliptic_apparent(sol, t_new_obj)
     
     dif_local = (2.0 * cpi + les - lel + fi) % (2.0 * cpi)
     if dif_local > cpi: dif_local -= 2.0 * cpi
@@ -255,7 +255,6 @@ def FasesDeLaLunaLatex(ano, dt_in):
         # Se usa el algoritmo de Brown/Meeus. Se calcula solo la primera vez (j=1)
         # y luego se incrementa secuencialmente.
         if j == 1:
-            val_lunacion = 0
             jd_actual = fun.DiaJul(dia, mes, ano_calc, hora)
             # Fechas base arbitrarias en 1998 para sincronizar la serie de lunaciones
             if qf == 0: base = fun.DiaJul(26,2,1998,17.433)
@@ -322,8 +321,6 @@ def FasesDeLaLunaLatex(ano, dt_in):
         elif first_char == '3': # Empieza en Menguante -> Desplazar 3 lugares
             x[idx_x] = x[idx_x][:30] + s1 + x[idx_x][40:]
             if idx_x + 1 < 16: x[idx_x+1] = s2 + s3 + s4 + x[idx_x+1][30:]
-
-    seg_arco = 60.0 * 60.0 * dif0 * 180.0 / PI
     
     # --- ESCRIBIR ARCHIVO DE SALIDA (Formato LaTeX) ---
     ruta_proyecto = Path(__file__).resolve().parent.parent.parent.parent
