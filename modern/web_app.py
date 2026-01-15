@@ -1,10 +1,9 @@
 import shutil
 import sys
-import os
 from datetime import datetime
 from pathlib import Path
-import streamlit as st
 
+import streamlit as st
 
 # =============================================================================
 # GENERADOR DE ALMANAQUE NÁUTICO - INTERFAZ STREAMLIT
@@ -12,7 +11,7 @@ import streamlit as st
 # Este script actúa como el punto de entrada principal para la aplicación web.
 # Gestiona la configuración del usuario, la ejecución secuencial de los módulos
 # científicos y la gestión de archivos (generación, compresión y limpieza).
-# 
+#
 # Flujo principal:
 # 1. Configuración de parámetros (Año, Delta T).
 # 2. Selección de módulos a ejecutar.
@@ -40,11 +39,11 @@ DATA_ROOT_DIR = current_dir.parent / "data"
 # Importación de módulos científicos con manejo de errores
 try:
     from src.estrellas.main_estrella import generar_datos_estrellas
-    from src.uso_anio_siguiente.uso_anio_siguiente import compute_corrections
-    from src.polar.main_polar import generar_datos_polar
     from src.fase_luna.faseLuna import FasesDeLaLunaLatex
     from src.paginas_an.fichDatAN import generarFichero
     from src.paralajes_v_m.VenusMarte import calculo_paralaje
+    from src.polar.main_polar import generar_datos_polar
+    from src.uso_anio_siguiente.uso_anio_siguiente import compute_corrections
     from src.utils.read_de440 import get_delta_t
     MODULOS_OK = True
 except ImportError as e:
@@ -79,20 +78,29 @@ st.markdown("""
 # 3. LÓGICA DE ESTADO (SESSION STATE)
 # =============================================================================
 # Lista de claves para los checkboxes de los módulos
-keys_modulos = ["run_fichero_dat", "run_stars", "run_polar", "run_luna", "run_paralajes", "run_uso_anio"]
+keys_modulos = ["run_fichero_dat", "run_stars", "run_polar",
+                "run_luna", "run_paralajes", "run_uso_anio"]
 
 # Inicialización del estado "Seleccionar Todos"
 if 'select_all' not in st.session_state:
     st.session_state.select_all = True
-    for key in keys_modulos: st.session_state[key] = True
+    for key in keys_modulos:
+        st.session_state[key] = True
 
 # Callback: Si se pulsa "Seleccionar Todos", actualiza los individuales
+
+
 def check_all():
-    for key in keys_modulos: st.session_state[key] = st.session_state.select_all
+    for key in keys_modulos:
+        st.session_state[key] = st.session_state.select_all
 
 # Callback: Si se cambia uno individual, verifica si están todos marcados o no
+
+
 def check_individual():
-    st.session_state.select_all = all([st.session_state[k] for k in keys_modulos])
+    st.session_state.select_all = all(
+        [st.session_state[k] for k in keys_modulos])
+
 
 # =============================================================================
 # 4. INTERFAZ DE USUARIO (LAYOUT)
@@ -102,15 +110,16 @@ col_config, col_main = st.columns([1, 3], gap="large")
 # --- COLUMNA IZQUIERDA: CONFIGURACIÓN ---
 with col_config:
     st.header("Configuración")
-    
+
     # Selector de Año (por defecto el año siguiente al actual)
-    year = st.number_input("Año", min_value=1900, max_value=2100, value=datetime.now().year + 1)
-    
+    year = st.number_input("Año", min_value=1900,
+                           max_value=2100, value=datetime.now().year + 1)
+
     st.markdown("---")
-    
+
     # Configuración de Delta T (Diferencia entre tiempo terrestre y universal)
     delta_t_type = st.radio("Delta T", ["Automático", "Manual"])
-    
+
     if delta_t_type == "Manual":
         delta_t_val = st.number_input("Valor (s)", value=69.0)
     else:
@@ -130,24 +139,27 @@ with col_main:
         st.subheader("Módulos")
         st.checkbox("Seleccionar Todos", key="select_all", on_change=check_all)
         st.markdown("---")
-        st.checkbox("Páginas Anuales", key="run_fichero_dat", on_change=check_individual)
+        st.checkbox("Páginas Anuales", key="run_fichero_dat",
+                    on_change=check_individual)
         st.checkbox("Estrellas", key="run_stars", on_change=check_individual)
         st.checkbox("Polar", key="run_polar", on_change=check_individual)
         st.checkbox("Fases Luna", key="run_luna", on_change=check_individual)
-        st.checkbox("Paralajes", key="run_paralajes", on_change=check_individual)
-        st.checkbox("Uso Año Siguiente", key="run_uso_anio", on_change=check_individual)
+        st.checkbox("Paralajes", key="run_paralajes",
+                    on_change=check_individual)
+        st.checkbox("Uso Año Siguiente", key="run_uso_anio",
+                    on_change=check_individual)
 
     # Área de Ejecución y Resultados
     with col_res:
         st.subheader("Ejecución")
         st.write("Pulse generar para iniciar el cálculo.")
-        
+
         # Layout de botones (Generar vs Descargar) en la misma fila
         c_btn_gen, c_btn_down = st.columns([1, 1], gap="small")
 
         with c_btn_gen:
             start_btn = st.button("Generar Almanaque", type="primary")
-        
+
         with c_btn_down:
             # Placeholder vacío donde aparecerá el botón de descarga dinámicamente
             download_placeholder = st.empty()
@@ -159,14 +171,14 @@ with col_main:
         # LÓGICA DE EJECUCIÓN (Al pulsar Generar)
         # =====================================================================
         if start_btn:
-            
+
             # -----------------------------------------------------------------
             # PASO 1: LIMPIEZA INICIAL DEL ENTORNO
             # -----------------------------------------------------------------
             # Objetivo: Eliminar cualquier residuo en la carpeta 'data' de ejecuciones previas
             if DATA_ROOT_DIR.exists():
                 try:
-                    shutil.rmtree(DATA_ROOT_DIR) # Borrado recursivo
+                    shutil.rmtree(DATA_ROOT_DIR)  # Borrado recursivo
                     DATA_ROOT_DIR.mkdir(parents=True, exist_ok=True)
                 except Exception as e:
                     st.error(f"Error crítico limpiando carpeta data: {e}")
@@ -183,25 +195,31 @@ with col_main:
             # -----------------------------------------------------------------
             # Estructura: (Nombre visible, Función, Argumentos Posicionales, Argumentos Nombrados)
             tareas = []
-            
-            if st.session_state.run_stars: 
-                tareas.append(("Estrellas", generar_datos_estrellas, (year, delta_t_val), {}))
-            
-            if st.session_state.run_polar: 
-                tareas.append(("Polar", generar_datos_polar, (year, delta_t_val), {}))
-            
-            if st.session_state.run_luna: 
-                tareas.append(("Fases Luna", FasesDeLaLunaLatex, (), {'ano': year, 'dt_in': delta_t_val}))
-            
-            if st.session_state.run_fichero_dat: 
+
+            if st.session_state.run_stars:
+                tareas.append(
+                    ("Estrellas", generar_datos_estrellas, (year, delta_t_val), {}))
+
+            if st.session_state.run_polar:
+                tareas.append(("Polar", generar_datos_polar,
+                              (year, delta_t_val), {}))
+
+            if st.session_state.run_luna:
+                tareas.append(("Fases Luna", FasesDeLaLunaLatex, (), {
+                              'ano': year, 'dt_in': delta_t_val}))
+
+            if st.session_state.run_fichero_dat:
                 # Genera los datos base de las páginas anuales
-                tareas.append(("Páginas Anuales", generarFichero, (), {'anio': year, 'dt': delta_t_val}))
-            
-            if st.session_state.run_paralajes: 
-                tareas.append(("Paralajes", calculo_paralaje, (), {'anio': year, 'dT': delta_t_val}))
-            
-            if st.session_state.run_uso_anio: 
-                tareas.append(("Uso Año Siguiente", compute_corrections, (), {'ano': year, 'dt_seconds': delta_t_val}))
+                tareas.append(("Páginas Anuales", generarFichero,
+                              (), {'anio': year, 'dt': delta_t_val}))
+
+            if st.session_state.run_paralajes:
+                tareas.append(("Paralajes", calculo_paralaje, (),
+                              {'anio': year, 'dT': delta_t_val}))
+
+            if st.session_state.run_uso_anio:
+                tareas.append(("Uso Año Siguiente", compute_corrections, (), {
+                              'ano': year, 'dt_seconds': delta_t_val}))
 
             # Validación: Si no hay tareas, detenemos la ejecución
             if not tareas:
@@ -213,23 +231,23 @@ with col_main:
             # -----------------------------------------------------------------
             output_paths = []
             total_pasos = len(tareas)
-            
+
             with status_container:
                 my_bar = st.progress(0, text="Iniciando limpieza y cálculo...")
-                
+
                 try:
                     for i, (nombre, func, args, kwargs) in enumerate(tareas):
                         # Actualizar barra de progreso
                         pct = int((i / total_pasos) * 100)
                         my_bar.progress(pct, text=f"Procesando: {nombre}...")
-                        
+
                         # Ejecutar función del módulo
                         with st.spinner(f"Calculando {nombre}..."):
                             res = func(*args, **kwargs)
                             output_paths.append(res)
-                        
+
                         st.success(f"{nombre} generado correctamente")
-                    
+
                     my_bar.progress(100, text="¡Completado!")
 
                 except Exception as e:
@@ -241,27 +259,25 @@ with col_main:
             # -----------------------------------------------------------------
             if output_paths:
                 zip_name = f"Almanaque_Nautico_{year}"
-                
+
                 # A. Crear ZIP temporal en /tmp (fuera de la carpeta visible data)
-                zip_path_str = shutil.make_archive(f"/tmp/{zip_name}", 'zip', year_output_dir)
-                
+                zip_path_str = shutil.make_archive(
+                    f"/tmp/{zip_name}", 'zip', year_output_dir)
+
                 # B. Cargar el archivo ZIP completo en la memoria RAM
                 #    Esto permite borrar el archivo físico inmediatamente después.
                 with open(zip_path_str, "rb") as fp:
                     zip_data = fp.read()
-                
+
                 # C. Limpieza Final: Borrar carpeta 'data' del servidor
                 #    Se realiza ANTES de mostrar el botón para asegurar que no quedan residuos
                 if DATA_ROOT_DIR.exists():
-                     shutil.rmtree(DATA_ROOT_DIR)
-                     # (Opcional) Recrear carpeta vacía por consistencia
-                     DATA_ROOT_DIR.mkdir()
+                    shutil.rmtree(DATA_ROOT_DIR)
+                    # (Opcional) Recrear carpeta vacía por consistencia
+                    DATA_ROOT_DIR.mkdir()
 
                 # D. Limpieza del ZIP temporal en /tmp
-                try:
-                    os.remove(zip_path_str)
-                except:
-                    pass
+                Path(zip_path_str).unlink(missing_ok=True)
 
                 # -----------------------------------------------------------------
                 # PASO 5: DISPONIBILIZAR DESCARGA
@@ -274,5 +290,6 @@ with col_main:
                     mime="application/zip",
                     type="primary"
                 )
-                
-                status_container.info("Archivos generados, empaquetados y eliminados del servidor. Listo para descargar.")
+
+                status_container.info(
+                    "Archivos generados, empaquetados y eliminados del servidor. Listo para descargar.")

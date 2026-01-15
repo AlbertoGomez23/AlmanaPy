@@ -1,14 +1,20 @@
-import os
 import io
+from pathlib import Path
+
+# --- CONFIGURACIÓN DE RUTAS ---
+BASE_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = BASE_DIR.parent.parent
+
 
 class PagTexProcessor:
     """
     Clase encargada de procesar datos de efemérides (formato de ancho fijo)
     y convertirlos a tablas formateadas en código LaTeX para el Almanaque Náutico.
-    
+
     Utiliza un buffer de líneas y una ventana deslizante para detectar valores
     repetidos y limpiar la presentación visual de la tabla.
     """
+
     def __init__(self):
         # --- Buffers de lectura ---
         # Almacenan 3 líneas consecutivas para comparar valores (anterior, actual, siguiente)
@@ -16,12 +22,12 @@ class PagTexProcessor:
         self.fil1 = ""  # Línea anterior (t-1)
         self.fil2 = ""  # Línea actual (t)
         self.fil3 = ""  # Línea siguiente (t+1)
-        
+
         # --- Buffer de almacenamiento diario ---
         # Array para almacenar las 24 horas del día + cabecera (índices 0 a 24)
         # Se procesan en memoria antes de escribir al archivo final.
-        self.v = [""] * 25  
-        
+        self.v = [""] * 25
+
         # Manejadores de archivos
         self.f_in = None   # Archivo de entrada (.dat)
         self.f_out = None  # Archivo de salida (.tex o .dat)
@@ -31,10 +37,10 @@ class PagTexProcessor:
     def read_line(self, length=110):
         """
         Lee una línea del archivo de entrada y normaliza su longitud.
-        
+
         Args:
             length (int): Longitud fija deseada (por defecto 110 caracteres).
-            
+
         Returns:
             str: Línea sin salto de línea y rellena con espacios a la derecha.
                  Retorna espacios si se alcanza el fin de archivo.
@@ -52,28 +58,28 @@ class PagTexProcessor:
         """
         Emula la asignación de subcadenas de Fortran (s(inicio:fin) = valor).
         Dado que los strings en Python son inmutables, crea uno nuevo.
-        
+
         Args:
             s (str): Cadena original.
             start_1_based (int): Índice de inicio (basado en 1).
             end_1_based (int): Índice final (basado en 1).
             value (str): Nuevo valor a insertar.
-            
+
         Returns:
             str: Nueva cadena modificada manteniendo la longitud fija (padding si es necesario).
         """
         # Asegurar longitud mínima de 110 caracteres para mantener formato tabular
         if len(s) < 110:
             s = s.ljust(110)
-            
+
         # Conversión de índices (1-based a 0-based de Python)
         start = start_1_based - 1
         end = end_1_based
         slice_len = end - start
-        
+
         # Ajustar el valor al tamaño exacto del segmento (recortar o rellenar)
         value_padded = value.ljust(slice_len)[:slice_len]
-        
+
         # Reconstrucción de la cadena mediante slicing
         return s[:start] + value_padded + s[end:]
 
@@ -83,7 +89,7 @@ class PagTexProcessor:
         """
         Proceso principal: Lee datos crudos, extrae constantes diarias y genera
         las tablas horarias en formato LaTeX.
-        
+
         Args:
             da (int): Día del año (o índice relativo).
             ano (int): Año del almanaque.
@@ -91,17 +97,20 @@ class PagTexProcessor:
             output_path (str): Ruta opcional del archivo de salida.
             input_content (str): Contenido en texto plano (para pruebas sin archivos).
         """
-        self.v = [" " * 110] * 25 # Reinicia el buffer diario
+        self.v = [" " * 110] * 25  # Reinicia el buffer diario
         ida = da + 9  # Ajuste de índice para el nombre del archivo fuente
-        
+
         # Construcción dinámica de la ruta de salida basada en la estructura del Almanaque
         if ida < 100:
-            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:02d}.dat"
+            nombre_archivo = f"AN{ano}{ida:02d}.dat"
         else:
-            path = f"./Almanaque Nautico/DATOS/{ano}/AN{ano}{ida:03d}.dat"
+            nombre_archivo = f"AN{ano}{ida:03d}.dat"
+
+        path = ROOT_DIR / "Almanaque Nautico" / \
+            "DATOS" / str(ano) / nombre_archivo
 
         # Crea directorios si no existen
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
             # Configuración de entrada: buffer de memoria o archivo en disco
@@ -109,8 +118,9 @@ class PagTexProcessor:
             if input_content:
                 self.f_in = io.StringIO(input_content)
             else:
-                self.f_in = open(input_path or './Datos/pag.dat', 'r', encoding='latin-1')
-            
+                self.f_in = open(input_path or ROOT_DIR /
+                                 'Datos' / 'pag.dat', 'r', encoding='latin-1')
+
             self.f_out = open(output_path or path, 'w', encoding='latin-1')
         except FileNotFoundError as e:
             print(f"Error abriendo archivos: {e}")
@@ -119,38 +129,46 @@ class PagTexProcessor:
         # ---------------------------------------------------------
         # FASE 1: Extracción de Cabecera y Definiciones LaTeX
         # ---------------------------------------------------------
-        
+
         # 1. Fecha
         self.fil1 = self.read_line()
         self.write_line(f"\\def\\fecha{{{self.fil1[:58]}}}")
 
         # 2. Semidiámetro del Sol (SD)
         self.fil1 = self.read_line()
-        self.write_line(f"\\def\\sdsol{{{self.fil1[6:8]}.{self.fil1[9]}\\Min}}")
+        self.write_line(
+            f"\\def\\sdsol{{{self.fil1[6:8]}.{self.fil1[9]}\\Min}}")
 
         # 3. Paso por el Meridiano de Greenwich (PMG) del Sol
         self.fil1 = self.read_line()
         # Relleno de cero si el dígito de la hora es un espacio
-        if self.fil1[9] == ' ': self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
-        self.write_line(f"\\def\\pmgsol{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}.{self.fil1[12]}\\Mint}}")
+        if self.fil1[9] == ' ':
+            self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
+        self.write_line(
+            f"\\def\\pmgsol{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}.{self.fil1[12]}\\Mint}}")
 
         # 4. Semidiámetro de la Luna
         self.fil1 = self.read_line()
-        self.write_line(f"\\def\\sdluna{{{self.fil1[6:8]}.{self.fil1[9]}\\Min}}")
+        self.write_line(
+            f"\\def\\sdluna{{{self.fil1[6:8]}.{self.fil1[9]}\\Min}}")
 
         # 5. Edad de la Luna
         self.fil1 = self.read_line()
-        self.write_line(f"\\def\\edad{{{self.fil1[7:9]}.{self.fil1[10]}\\Diap}}")
+        self.write_line(
+            f"\\def\\edad{{{self.fil1[7:9]}.{self.fil1[10]}\\Diap}}")
 
         # 6. PMG de la Luna
         self.fil1 = self.read_line()
-        if self.fil1[9] == ' ': self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
-        self.write_line(f"\\def\\pmgluna{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}\\Mint}}")
+        if self.fil1[9] == ' ':
+            self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
+        self.write_line(
+            f"\\def\\pmgluna{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}\\Mint}}")
 
         # 7. Fenómenos: pheu (Salida), phed (Puesta), phet (Crepúsculo)
         for name in ["pheu", "phed", "phet"]:
             self.fil1 = self.read_line()
-            self.write_line(f"\\def\\{name}{{{self.fil1[9:11]}.{self.fil1[12]}\\Min}}")
+            self.write_line(
+                f"\\def\\{name}{{{self.fil1[9:11]}.{self.fil1[12]}\\Min}}")
 
         # 8. Datos de rotación/paso adicional
         self.fil1 = self.read_line()
@@ -163,32 +181,32 @@ class PagTexProcessor:
         # FASE 2: Procesamiento Tabla Superior (Sol/Luna/Aries)
         # Lógica 'ARREGU' (Arreglo Arriba)
         # ---------------------------------------------------------
-        
+
         # Carga inicial de la ventana deslizante (3 líneas)
-        self.fil1 = self.read_line() # Hora 0
-        self.fil2 = self.read_line() # Hora 1
-        self.fil3 = self.read_line() # Hora 2
-        
-        self.v[0] = self.fil1 # La primera línea se guarda tal cual
-        
+        self.fil1 = self.read_line()  # Hora 0
+        self.fil2 = self.read_line()  # Hora 1
+        self.fil3 = self.read_line()  # Hora 2
+
+        self.v[0] = self.fil1  # La primera línea se guarda tal cual
+
         # Iteración para las horas 1 a 23
         for i in range(1, 24):
-            fil4 = self.fil2 # Guarda referencia temporal
-            
+            fil4 = self.fil2  # Guarda referencia temporal
+
             # 'arregu_bis' compara la línea actual con la anterior y siguiente
             # para limpiar datos repetidos (columnas que no cambian)
             self.fil2 = self.arregu_bis(i, self.fil1, self.fil2, self.fil3)
             self.v[i] = self.fil2
-            
+
             # Desplazamiento de la ventana
             self.fil1 = fil4       # La actual pasa a ser la anterior
             self.fil2 = self.fil3  # La siguiente pasa a ser la actual
-            
+
             # Leer nueva línea siguiente (si no estamos al final)
             if i < 23:
                 self.fil3 = self.read_line()
 
-        self.v[24] = self.fil2 # La última línea (hora 24)
+        self.v[24] = self.fil2  # La última línea (hora 24)
 
         # Limpieza final: Relleno de ceros en columnas específicas si están vacías
         for i in range(25):
@@ -203,40 +221,46 @@ class PagTexProcessor:
         # ---------------------------------------------------------
         # FASE 3: Escritura de Tabla Superior a LaTeX
         # ---------------------------------------------------------
-        self.write_line(self.format_211(self.v[0])) # Encabezado/Fila 0
+        self.write_line(self.format_211(self.v[0]))  # Encabezado/Fila 0
 
         for i in range(1, 25):
             # Selección de formato según índice para agrupamiento visual (cada 6 horas)
             if i in [5, 17]:
-                self.write_line(self.format_213(self.v[i])) # Espaciado extra
+                self.write_line(self.format_213(self.v[i]))  # Espaciado extra
             elif i == 11:
-                self.write_line(self.format_214(self.v[i])) # Mitad del día
+                self.write_line(self.format_214(self.v[i]))  # Mitad del día
             elif i in [13, 24]:
-                self.write_line(self.format_215(self.v[i])) # Negritas específicas
+                # Negritas específicas
+                self.write_line(self.format_215(self.v[i]))
             else:
-                self.write_line(self.format_212(self.v[i])) # Formato estándar
-        
-        self.write_line("}") # Cierre macro \arriba
+                self.write_line(self.format_212(self.v[i]))  # Formato estándar
+
+        self.write_line("}")  # Cierre macro \arriba
 
         # ---------------------------------------------------------
         # FASE 4: Planetas y Punto de Aries (Intermedio)
         # ---------------------------------------------------------
-        
+
         # Punto de Aries
         self.fil1 = self.read_line()
-        if self.fil1[15] == ' ': self.fil1 = self.modify_str(self.fil1, 16, 16, '0')
-        self.write_line(f"\\def\\pmgaries{{{self.fil1[12:14]}\\Hora\\ {self.fil1[15:17]}.{self.fil1[18]}\\Mint}}")
+        if self.fil1[15] == ' ':
+            self.fil1 = self.modify_str(self.fil1, 16, 16, '0')
+        self.write_line(
+            f"\\def\\pmgaries{{{self.fil1[12:14]}\\Hora\\ {self.fil1[15:17]}.{self.fil1[18]}\\Mint}}")
 
         # Datos de Planetas (Venus, Marte, Júpiter, Saturno)
         planetas = ["venus", "marte", "jupiter", "saturno"]
         for p in planetas:
             # Magnitud
             self.fil1 = self.read_line()
-            self.write_line(f"\\def\\mag{p}{{{self.fil1[6]}{self.fil1[8:11]}}}")
+            self.write_line(
+                f"\\def\\mag{p}{{{self.fil1[6]}{self.fil1[8:11]}}}")
             # Paso por el Meridiano (PMG)
             self.fil1 = self.read_line()
-            if self.fil1[9] == ' ': self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
-            self.write_line(f"\\def\\pmg{p}{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}\\Mint}}")
+            if self.fil1[9] == ' ':
+                self.fil1 = self.modify_str(self.fil1, 10, 10, '0')
+            self.write_line(
+                f"\\def\\pmg{p}{{{self.fil1[6:8]}\\Hora\\ {self.fil1[9:11]}\\Mint}}")
 
         self.write_line(r"\def\abajo{")
 
@@ -244,27 +268,27 @@ class PagTexProcessor:
         # FASE 5: Procesamiento Tabla Inferior (Planetas)
         # Lógica 'ARREGD' (Arreglo Abajo)
         # ---------------------------------------------------------
-        
+
         # Reinicio de lectura para la sección inferior
         self.fil1 = self.read_line()
         self.fil2 = self.read_line()
         self.fil3 = self.read_line()
-        
+
         # Recorte a 97 caracteres para la tabla inferior
         self.v[0] = self.fil1[:97].ljust(110)
-        
+
         # Ventana deslizante para tabla inferior
         for i in range(1, 24):
             fil4 = self.fil2
             self.fil2 = self.arregd_bis(i, self.fil1, self.fil2, self.fil3)
             self.v[i] = self.fil2[:97].ljust(110)
-            
+
             self.fil1 = fil4
             self.fil2 = self.fil3
-            
+
             if i < 23:
                 self.fil3 = self.read_line()
-        
+
         self.v[24] = self.fil2[:97].ljust(110)
 
         # Limpieza de ceros en tabla inferior
@@ -273,7 +297,8 @@ class PagTexProcessor:
             # Índices ajustados para la estructura de columnas de planetas
             indices = [9, 19, 29, 39, 49, 59, 69, 79, 89]
             for idx in indices:
-                if line[idx] == ' ': line = self.modify_str(line, idx+1, idx+1, '0')
+                if line[idx] == ' ':
+                    line = self.modify_str(line, idx+1, idx+1, '0')
             self.v[i] = line
 
         # ---------------------------------------------------------
@@ -285,25 +310,26 @@ class PagTexProcessor:
                 self.write_line(self.format_232(self.v[i]))
             else:
                 self.write_line(self.format_231(self.v[i]))
-                
-        self.write_line("}") # Cierre macro \abajo
+
+        self.write_line("}")  # Cierre macro \abajo
 
         # ---------------------------------------------------------
         # FASE 7: Pie de Página (Diferencias y Fase Lunar)
         # ---------------------------------------------------------
-        
+
         # Procesamiento de la línea de "Diferencias"
         self.fil1 = self.read_line()
-        self.fil1 = self.arredif(self.fil1) # Limpieza especial para diferencias
-        
+        # Limpieza especial para diferencias
+        self.fil1 = self.arredif(self.fil1)
+
         # Helper interno para extraer pares de diferencias
         def get_diff(start):
             idx = start - 1
             return f"{self.fil1[idx]}{self.fil1[idx+1:idx+3]}"
-            
+
         # Extracción en posiciones fijas (20, 30, ..., 90)
         vals = [get_diff(x) for x in [20, 30, 40, 50, 60, 70, 80, 90]]
-        
+
         # Construcción de la tabla de diferencias LaTeX
         diff_str = f"\\def\\dif{{${vals[0]}$ &&& ${vals[1]}$&& ${vals[2]}$ &&& ${vals[3]}$&& ${vals[4]}$ &&& ${vals[5]}$&& ${vals[6]}$ &&& ${vals[7]}$}}"
         self.write_line(diff_str)
@@ -352,7 +378,7 @@ class PagTexProcessor:
             f2 = self.compa4(65, 68, f1, f2, f3)
             f2 = self.compa4(85, 88, f1, f2, f3)
         return f2
-    
+
     def arredif(self, f1):
         """
         Limpia la línea de diferencias: Si encuentra un ' 0', elimina el dígito anterior
@@ -361,8 +387,8 @@ class PagTexProcessor:
         indices = [22, 32, 42, 52, 62, 72, 82, 92]
         for idx in indices:
             # Detecta patrón "espacio cero"
-            if f1[idx-1:idx+1] == ' 0': 
-                 f1 = self.modify_str(f1, idx-2, idx-2, ' ')
+            if f1[idx-1:idx+1] == ' 0':
+                f1 = self.modify_str(f1, idx-2, idx-2, ' ')
         return f1
 
     def compa4(self, i1, i2, f1, f2, f3):
@@ -393,12 +419,12 @@ class PagTexProcessor:
     def get_parts_upper(self, line):
         """Trocea la línea superior (110 chars) en una lista de campos de datos."""
         return [
-            line[1:3], line[5:8], line[9:13], line[14], line[16:18], # 0-4
-            line[19:23], line[25:28], line[29:33], line[34:37], line[38], # 5-9
-            line[40:42], line[43:47], line[48:51], line[53:55], line[56], # 10-14
-            line[59:61], line[62:64], line[66:68], line[69:71], line[73:75], # 15-19
-            line[76:78], line[80:82], line[83:85], line[87:90], line[92:94], # 20-24
-            line[95:97], line[99:102] # 25-26
+            line[1:3], line[5:8], line[9:13], line[14], line[16:18],  # 0-4
+            line[19:23], line[25:28], line[29:33], line[34:37], line[38],  # 5-9
+            line[40:42], line[43:47], line[48:51], line[53:55], line[56],  # 10-14
+            line[59:61], line[62:64], line[66:68], line[69:71], line[73:75],  # 15-19
+            line[76:78], line[80:82], line[83:85], line[87:90], line[92:94],  # 20-24
+            line[95:97], line[99:102]  # 25-26
         ]
 
     def format_211(self, line):
@@ -427,7 +453,7 @@ class PagTexProcessor:
     def format_214(self, line):
         """Variante mixta: negrita en ciertas columnas y espacio extra."""
         base = self.format_212(line)
-        base = base.replace(r"&    ", r"&\bf ") 
+        base = base.replace(r"&    ", r"&\bf ")
         base = base.replace(r" \\", r" \\[1.0ex]")
         return base
 
@@ -440,11 +466,11 @@ class PagTexProcessor:
     def get_parts_lower(self, line):
         """Trocea la línea inferior para la tabla de planetas."""
         return [
-            line[1:3], line[5:8], line[9:13], line[15:18], line[19:23], # 0-4
-            line[24], line[26:28], line[29:33], line[35:38], line[39:43], # 5-9
-            line[44], line[46:48], line[49:53], line[55:58], line[59:63], # 10-14
-            line[64], line[66:68], line[69:73], line[75:78], line[79:83], # 15-19
-            line[84], line[86:88], line[89:93] # 20-22
+            line[1:3], line[5:8], line[9:13], line[15:18], line[19:23],  # 0-4
+            line[24], line[26:28], line[29:33], line[35:38], line[39:43],  # 5-9
+            line[44], line[46:48], line[49:53], line[55:58], line[59:63],  # 10-14
+            line[64], line[66:68], line[69:73], line[75:78], line[79:83],  # 15-19
+            line[84], line[86:88], line[89:93]  # 20-22
         ]
 
     def format_231(self, line):
@@ -457,6 +483,7 @@ class PagTexProcessor:
     def format_232(self, line):
         """Formato para tabla de planetas con espacio vertical extra."""
         return self.format_231(line).replace(r"\\", r"\\[1.0ex]")
+
 
 # --- Bloque de Ejecución (Punto de entrada) ---
 if __name__ == "__main__":

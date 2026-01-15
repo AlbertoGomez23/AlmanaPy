@@ -1,17 +1,15 @@
 # src/estrellas/main_estrella.py
-import os
+from estrellas.herramientas_legacy import HOMI, HOMIEN, SIGRMI, UNANGGRA
+from estrellas.calculos import (calcular_paso_meridiano_greenwich,
+                                calcular_posicion_aparente, cargar_catalogo)
 import sys
 from pathlib import Path
-
 
 # Ajuste de rutas
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
-from estrellas.herramientas_legacy import HOMI, HOMIEN, SIGRMI, UNANGGRA
-from estrellas.calculos import (calcular_paso_meridiano_greenwich,
-                                calcular_posicion_aparente, cargar_catalogo)
 
 # Constantes
 PI = 3.141592653589793
@@ -214,8 +212,8 @@ def generar_datos_estrellas(ano, valor_delta_t):
     fichero_cat2 = "estANFKH.txt"
     num_estrellas2 = 99
 
-    ruta_cat1 = os.path.join(BASE_DIR, "estrellas", fichero_cat1)
-    ruta_cat2 = os.path.join(BASE_DIR, "estrellas", fichero_cat2)
+    ruta_cat1 = BASE_DIR / "estrellas" / fichero_cat1
+    ruta_cat2 = BASE_DIR / "estrellas" / fichero_cat2
     catalogo1 = cargar_catalogo(ruta_cat1)
     catalogo2 = cargar_catalogo(ruta_cat2)
 
@@ -257,14 +255,14 @@ def generar_datos_estrellas(ano, valor_delta_t):
     root_dir = BASE_DIR.parent.parent
 
     dir_salida = root_dir / "data" / "almanaque_nautico" / str(ano)
-    os.makedirs(dir_salida, exist_ok=True)
+    dir_salida.mkdir(parents=True, exist_ok=True)
 
     # =========================================================================
     # 3. ESCRITURA
     # =========================================================================
 
-    f380 = open(os.path.join(dir_salida, f"AN{ano}380.DAT"), 'w')
-    f381 = open(os.path.join(dir_salida, f"AN{ano}381.DAT"), 'w')
+    f380 = (dir_salida / f"AN{ano}380.DAT").open('w')
+    f381 = (dir_salida / f"AN{ano}381.DAT").open('w')
 
     for n in range(50):
         # PARSING DE 'u' EXACTO (Slicing de tu prueba.py)
@@ -374,12 +372,12 @@ def generar_datos_estrellas(ano, valor_delta_t):
         z[k_idx] = w[orig_idx]
 
     # MODO 2
-    f376 = open(os.path.join(dir_salida, f"AN{ano}376.DAT"), 'w')
-    f377 = open(os.path.join(dir_salida, f"AN{ano}377.DAT"), 'w')
-    f378 = open(os.path.join(dir_salida, f"AN{ano}378.DAT"), 'w')
-    f379 = open(os.path.join(dir_salida, f"AN{ano}379.DAT"), 'w')
-    fcar = open(os.path.join(dir_salida, f"AN{ano}CARTAS.DAT"), 'w')
-    fcde = open(os.path.join(dir_salida, f"AN{ano}CARTDE.DAT"), 'w')
+    f376 = (dir_salida / f"AN{ano}376.DAT").open('w')
+    f377 = (dir_salida / f"AN{ano}377.DAT").open('w')
+    f378 = (dir_salida / f"AN{ano}378.DAT").open('w')
+    f379 = (dir_salida / f"AN{ano}379.DAT").open('w')
+    fcar = (dir_salida / f"AN{ano}CARTAS.DAT").open('w')
+    fcde = (dir_salida / f"AN{ano}CARTDE.DAT").open('w')
 
     # --- Función de parseo robusta para Declinación ---
     def parse_w_robust(w_str):
@@ -764,7 +762,7 @@ def main():
         dia_mes = 15
 
     fichero_cat = "estAN_UH.txt" if modo == 1 else "estANFKH.txt"
-    ruta_cat = os.path.join(BASE_DIR, "estrellas", fichero_cat)
+    ruta_cat = BASE_DIR / "estrellas" / fichero_cat
     # print(f" Cargando catálogo desde: {fichero_cat}")
 
     catalogo = cargar_catalogo(ruta_cat)
@@ -785,7 +783,7 @@ def main():
 
     # ============================================================
     # LÓGICA DE SELECCIÓN DE DELTA T (Modificación Solicitada)
-    # ============================================================    
+    # ============================================================
 
     # ============================================================
 
@@ -872,15 +870,15 @@ def main():
     root_dir = BASE_DIR.parent.parent
 
     dir_salida = root_dir / "data" / "almanaque_nautico" / str(ano)
-    os.makedirs(dir_salida, exist_ok=True)
+    dir_salida.mkdir(parents=True, exist_ok=True)
 
     # =========================================================================
     # 3. ESCRITURA
     # =========================================================================
 
     if modo == 1:
-        f380 = open(os.path.join(dir_salida, f"AN{ano}380.DAT"), 'w')
-        f381 = open(os.path.join(dir_salida, f"AN{ano}381.DAT"), 'w')
+        f380 = (dir_salida / f"AN{ano}380.DAT").open('w')
+        f381 = (dir_salida / f"AN{ano}381.DAT").open('w')
 
         for n in range(50):
             # PARSING DE 'u' EXACTO (Slicing de tu prueba.py)
@@ -939,12 +937,12 @@ def main():
 
     else:
         # MODO 3
-        f376 = open(os.path.join(dir_salida, f"AN{ano}376.DAT"), 'w')
-        f377 = open(os.path.join(dir_salida, f"AN{ano}377.DAT"), 'w')
-        f378 = open(os.path.join(dir_salida, f"AN{ano}378.DAT"), 'w')
-        f379 = open(os.path.join(dir_salida, f"AN{ano}379.DAT"), 'w')
-        fcar = open(os.path.join(dir_salida, f"AN{ano}CARTAS.DAT"), 'w')
-        fcde = open(os.path.join(dir_salida, f"AN{ano}CARTDE.DAT"), 'w')
+        f376 = (dir_salida / f"AN{ano}376.DAT").open('w')
+        f377 = (dir_salida / f"AN{ano}377.DAT").open('w')
+        f378 = (dir_salida / f"AN{ano}378.DAT").open('w')
+        f379 = (dir_salida / f"AN{ano}379.DAT").open('w')
+        fcar = (dir_salida / f"AN{ano}CARTAS.DAT").open('w')
+        fcde = (dir_salida / f"AN{ano}CARTDE.DAT").open('w')
 
         # --- Función de parseo robusta para Declinación ---
         def parse_w_robust(w_str):
