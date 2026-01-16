@@ -51,7 +51,7 @@ Este proyecto está bajo la Licencia MIT. Consulte el archivo `LICENSE` para má
 
 ## 🤝 Colaboradores
 
-- Juan Cabañas Carbonell
+- Juan Cabañas Carbonell - [GitHub](https://github.com/juancabanasUCA)
 - Alberto Gómez Moreno - [GitHub](https://github.com/AlbertoGomez23)
 - Raúl Silva Bienvenido - [GitHub](https://github.com/Rasilbi05)
 - Carlos Fernández Cabeza - [GitHub](https://github.com/CarlosFdeezz)
