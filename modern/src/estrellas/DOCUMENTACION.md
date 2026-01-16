@@ -22,20 +22,23 @@ El módulo genera código fuente **LaTeX** listo para maquetar:
 A diferencia de la versión anterior que requería un compilador Fortran, el nuevo entorno se basa en:
 
 **A. Entorno de Ejecución:**
+
 * **Python 3.10** o superior.
 * Librerías externas:
-    * `skyfield` (Motor astrométrico).
-    * `numpy` (Cálculo numérico).
+
+  * `skyfield` (Motor astrométrico).
+  * `numpy` (Cálculo numérico).
 
 **B. Archivos de Datos Astronómicos:**
+
 * El sistema descarga o utiliza automáticamente las efemérides **DE440** (`de440.bsp`) y los datos de orientación terrestre del IERS (`finals2000A.all`).
 
 ## 3. Archivos de entrada requeridos
 
 El módulo requiere los siguientes catálogos de texto plano en el directorio `src/estrellas/`:
 
-1.  **`estANFKH.txt`**: Catálogo maestro de 99 estrellas (FK5/Hipparcos) con posición J2000, movimientos propios, paralaje y velocidad radial.
-2.  **`estAN_UH.txt`**: Subconjunto de 50 estrellas optimizado para el cálculo de pasos meridianos.
+1. **`estANFKH.txt`**: Catálogo maestro de 99 estrellas (FK5/Hipparcos) con posición J2000, movimientos propios, paralaje y velocidad radial.
+2. **`estAN_UH.txt`**: Subconjunto de 50 estrellas optimizado para el cálculo de pasos meridianos.
 
 ## 4. Archivos de salida generados
 
@@ -58,6 +61,7 @@ El sistema ahora organiza la salida automáticamente en una estructura de direct
 El código se ha modularizado en tres componentes principales para separar la física, la presentación y el control.
 
 ### A. `calculos.py` (Motor Astrofísico)
+
 Sustituye a `ReduEstr.f` y `PasoMeGr.f`.
 
 * **`cargar_catalogo()`**: Lee los ficheros `.txt`, convierte unidades y crea objetos `Star` de Skyfield.
@@ -66,6 +70,7 @@ Sustituye a `ReduEstr.f` y `PasoMeGr.f`.
 * **`aplicar_delta_t_manual()`**: *Nueva funcionalidad*. Permite inyectar un valor fijo de $\Delta T = TT - UT$ para reproducir almanaques históricos o forzar valores oficiales, anulando la predicción automática del IERS.
 
 ### B. `herramientas_legacy.py` (Capa de Compatibilidad Visual)
+
 Sustituye a `SubrEstr.f`.
 
 Contiene funciones portadas estrictamente del Fortran original para garantizar que los redondeos tipográficos sean idénticos a las ediciones impresas anteriores:
@@ -75,6 +80,7 @@ Contiene funciones portadas estrictamente del Fortran original para garantizar q
 * **`UNANGGRA`**: Unificación del grado base para columnas mensuales, evitando saltos visuales por nutación (ej. $29^\circ 60.1'$ en lugar de $30^\circ 00.1'$ si el resto de la columna es 29).
 
 ### C. `main_estrella.py` (Controlador)
+
 Sustituye a `prueba.f`.
 
 * Gestiona la interfaz de línea de comandos (CLI).
@@ -87,5 +93,7 @@ Sustituye a `prueba.f`.
 El programa se ejecuta desde la terminal en el entorno Python configurado.
 
 **Comando:**
+
 ```bash
 python main_estrella.py
+```

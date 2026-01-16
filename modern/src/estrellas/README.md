@@ -21,21 +21,22 @@ El sistema migra la lógica original escrita en Fortran 77 a Python moderno, sus
 
 El módulo se compone de tres scripts principales ubicados en `src/estrellas/`:
 
-1.  **`calculos.py`**:
+1. **`calculos.py`**:
     * **Función:** Motor astrofísico.
     * **Responsabilidad:** Carga el catálogo estelar (`estANFKH.txt`), aplica movimientos propios, paralaje y calcula la posición aparente (AR/DEC) y el paso por el meridiano. Implementa la lógica de inyección de $\Delta T$ manual.
 
-2.  **`herramientas_legacy.py`**:
+2. **`herramientas_legacy.py`**:
     * **Función:** Capa de compatibilidad visual.
     * **Responsabilidad:** Contiene las funciones de redondeo (`HOMIEN`, `SIGRMI`) portadas línea a línea desde Fortran. Garantiza que `59.96` minutos se conviertan en `00.0` del grado siguiente, tal como espera el maquetador del Almanaque.
 
-3.  **`main.py`**:
+3. **`main_estrella.py`**:
     * **Función:** Controlador principal (CLI).
     * **Responsabilidad:** Interactúa con el usuario, itera sobre las estrellas y meses, formatea las cadenas LaTeX y guarda los archivos en la ruta `data/YYYY/`.
 
 ## 3. Instrucciones de Uso
 
 ### Prerrequisitos
+
 * Python 3.10+
 * Librerías: `skyfield`, `numpy`.
 * Archivos de catálogo presentes en la carpeta: `estANFKH.txt` y `estAN_UH.txt`.
@@ -46,3 +47,4 @@ Desde la terminal, navega a la carpeta `modern/src/estrellas/` y ejecuta:
 
 ```bash
 python main_estrella.py
+```

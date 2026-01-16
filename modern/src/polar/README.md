@@ -22,7 +22,7 @@ Utiliza la librería de alta precisión **Skyfield** (NASA JPL DE440) para obten
 
 El módulo se condensa principalmente en un script orquestador, apoyándose en utilidades compartidas del proyecto:
 
-1.  **`main_polar.py`**:
+1. **`main_polar.py`**:
     * **Función:** Controlador principal y motor de cálculo.
     * **Responsabilidad:**
         * Define las constantes astrométricas de la Polar (J2000).
@@ -31,7 +31,7 @@ El módulo se condensa principalmente en un script orquestador, apoyándose en u
         * Aplica las fórmulas trigonométricas de corrección ($Q_1, Q_2, Q_3$).
         * Genera la salida formateada en LaTeX.
 
-2.  **Dependencias Externas**:
+2. **Dependencias Externas**:
     * `utils.read_de440`: Carga perezosa (lazy loading) de las efemérides JPL DE440.
     * `estrellas.calculos`: Importa `aplicar_delta_t_manual` para la gestión del tiempo dinámico/manual.
 
@@ -46,6 +46,7 @@ El script implementa las fórmulas clásicas de corrección a la Polar basándos
 ## 3. Instrucciones de Uso
 
 ### Prerrequisitos
+
 * Python 3.10+
 * Librerías: `skyfield`, `numpy`.
 * Existencia de los módulos hermanos `utils` y `estrellas` en el `PYTHONPATH` o estructura de directorios relativa.
@@ -56,3 +57,4 @@ Desde la terminal, navega a la carpeta `modern/src/polar/` y ejecuta:
 
 ```bash
 python main_polar.py
+```

@@ -5,7 +5,7 @@
 **Versión:** 2.0 (Migración a Python/Skyfield)
 **Fecha:** 29/11/2025
 
-## 1. Descripción del módulo
+##  1. Descripción del módulo
 
 Este módulo genera las tablas de correcciones para la Estrella Polar (Polaris) utilizadas en navegación astronómica. Ha sido migrado desde Fortran 77 a **Python 3**, utilizando la librería **Skyfield** para los cálculos astrométricos de alta precisión basados en las efemérides DE440 del JPL.
 
@@ -21,7 +21,7 @@ El módulo genera código fuente **LaTeX** listo para maquetar:
 
 * **Página 385:** Tabla de azimutes de Polaris
 
-## 2. Dependencias y requisitos previos
+##  2. Dependencias y requisitos previos
 
 **A. Entorno de Ejecución:**
 
@@ -29,15 +29,15 @@ El módulo genera código fuente **LaTeX** listo para maquetar:
 
 * Librerías externas:
 
-    * `skyfield` (Motor astrométrico)
-    * `numpy` (Cálculo numérico)
-    * `math` (Funciones matemáticas básicas)
+  * `skyfield` (Motor astrométrico)
+  * `numpy` (Cálculo numérico)
+  * `math` (Funciones matemáticas básicas)
 
 **B. Archivos de Datos Astronómicos:**
 
 * El sistema utiliza las efemérides **DE440** (`de440.bsp`) y los datos de orientación terrestre del IERS (`finals2000A.all`) a través de Skyfield
 
-## 3. Archivos de entrada requeridos
+## 3. Archivos de entrada requeridos
 
 El módulo NO requiere archivos de catálogo externos, ya que los datos astrométricos de Polaris están codificados internamente basados en el catálogo FK5:
 
@@ -49,7 +49,7 @@ POLAR_J2000 = {
     'pm_dec': -7.369167952864947e-06,   # Movimiento propio en Dec (rad/siglo)
 }
 
-## 4. Archivos de salida generados
+## 4. Archivos de salida generados
 
 El sistema organiza la salida automáticamente en una estructura de directorios externa al código fuente.
 
@@ -63,7 +63,7 @@ El sistema organiza la salida automáticamente en una estructura de directorios 
 | `AN[AÑO]384B.DAT` | Tabla III - Corrección por nutación Dec | Pág. 384B |
 | `AN[AÑO]385.DAT` | Tabla de azimutes de Polaris | Pág. 385 |
 
-## 5. Estructura interna y algoritmos
+## 5. Estructura interna y algoritmos
 
 ### A. Cálculo de Posiciones Medias Mensuales
 
@@ -76,10 +76,9 @@ apparent = astrometric.apparent()
 ra, dec, _ = apparent.radec(epoch='date')
 Valores medios anuales:
 
-
 a₀ = (Σ al[k]) / 13.0   # Ascensión recta media
 d₀ = (Σ de[k]) / 13.0   # Declinación media
-cd = π/2 - d₀          # Distancia polar complementaria
+cd = π/2 - d₀           # Distancia polar complementaria
 B. Tabla I - Correcciones Principal (Páginas 382-383)
 Fórmula fundamental:
 
@@ -105,7 +104,6 @@ Formato: Ángulo & Minutos & Signo & Valor
 C. Tabla II - Corrección por Nutación AR (384A)
 Fórmula:
 
-
 corrección = 0.5 × cd² × sin²(h - a₀) × tan(alt) × (60.0 / DEG)
 Donde:
 
@@ -129,16 +127,18 @@ Fórmula:
 azimut = atan[-sin(h - a₀) / (tan(d₀) × cos(alt))] × (180/π)
 Organizado para ángulos horarios de 0°-360° (incrementos de 10°) y altitudes de 10°-65° (incrementos de 5°).
 
-## 6. Características de Implementación
+##  6. Características de Implementación
 
 ### A. Precisión Numérica
+
 Uso de DEG = π/180 exacto para evitar errores de redondeo
 
 Cálculos en radianes hasta la fase final de formateo
 
 Validación de valores cercanos a cero (±0.05) para mostrar "0.0"
 
-### B. Formateo LaTeX Avanzado
+###  B. Formateo LaTeX Avanzado
+
 Separadores & para alineación de columnas
 
 Comandos \\[1ex] y \\[2ex] para espaciado vertical
@@ -148,6 +148,7 @@ Signos matemáticos encapsulados en $+$/$-$
 Texto en negrita \\bf para encabezados
 
 ### C. Gestión de Delta T
+
 Integración con el sistema común de configuración de Delta T:
 
 Automático: Valores IERS en tiempo real
@@ -155,6 +156,7 @@ Automático: Valores IERS en tiempo real
 Manual: Valores históricos o específicos por usuario
 
 ### 7. Ejemplo de uso / ejecución
+
 El programa se ejecuta desde la terminal en el entorno Python configurado.
 
 Comando:
