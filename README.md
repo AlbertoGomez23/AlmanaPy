@@ -5,32 +5,50 @@ Este proyecto consiste en la modernización del software de generación del Alma
 ## 🛠️ Tecnologías Principales
 
 - **Lenguaje:** Python 3.12+
-- **Motor Astronómico:** `skyfield` y `numpy`.
+- **Motor Astronómico:** `skyfield`, `jplephem` y `numpy`.
 - **Datos:** Efemérides JPL SPICE (Kernel `de440.bsp`).
 - **Interfaz:** interfaz web basada en `Streamlit`.
 
 ## 📥 Instalación
 
-```bash
-git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
-cd PROYECTO-PINF
-```
-
-### Opción 1: Dev Containers (Recomendado)
+### Opción 1: Dev Containers (Recomendado para desarrollo)
 
 Entorno de desarrollo reproducible con todas las dependencias preinstaladas:
 
 1. **Requisitos:** Docker Desktop y la extensión **Dev Containers** para VS Code.
-2. Abrir la carpeta en VS Code.
-3. Seleccionar **"Reopen in Container"** (o vía paleta: `F1` > `Dev Containers: Reopen in Container`).
+2. Clonar el repositorio:
 
-### Opción 2: Instalación Local
+   ```bash
+   git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
+   cd PROYECTO-PINF
+   ```
 
-Si prefieres no usar Docker, instala las dependencias manualmente:
+3. Abrir la carpeta en VS Code.
+4. Seleccionar **"Reopen in Container"** (o vía paleta: `F1` > `Dev Containers: Reopen in Container`).
+5. Ejecutar la aplicación web con `streamlit run modern/web_app.py`
+
+### Opción 2: Docker desde DockerHub (Recomendado para producción)
+
+Usar la imagen precompilada desde DockerHub sin necesidad de clonar el repositorio:
 
 ```bash
-pip install -r requirements.txt
+docker pull carlosfdezz/almanaque-nautico:latest
+docker run -p 8501:8501 carlosfdezz/almanaque-nautico:latest
 ```
+
+Accede a la aplicación en `http://localhost:8501`
+
+### Opción 3: Docker Compose (para desarrollo local)
+
+Construir y ejecutar la imagen localmente con Docker Compose:
+
+```bash
+git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
+cd PROYECTO-PINF
+docker-compose up --build
+```
+
+Accede a la aplicación en `http://localhost:8501`
 
 ## 📂 Estructura del Proyecto
 
@@ -46,6 +64,41 @@ pip install -r requirements.txt
 - **Documentación:** Comentarios y docstrings detallados para cada función y módulo.
 - **Unidades:** Consistencia en el uso de unidades (grados, radianes, horas, días julianos, etc.) según la convención astronómica estándar.
 - **Dependencias:** Uso de bibliotecas científicas estándar, como `numpy` y `skyfield`, para cálculos astronómicos precisos, evitando implementaciones personalizadas cuando sea posible.
+
+## Deploy a DockerHub
+
+Para publicar una nueva versión de la imagen en DockerHub:
+
+1. **Login en DockerHub** (primera vez):
+
+   ```bash
+   docker login
+   ```
+
+2. **Construir la imagen:**
+
+   ```bash
+   docker build -t usuario-dockerhub/almanaque-nautico:v1.0.0 .
+   ```
+
+   Reemplaza `usuario-dockerhub` con tu usuario real de DockerHub.
+
+3. **Subir a DockerHub:**
+
+   ```bash
+   docker push usuario-dockerhub/almanaque-nautico:v1.0.0
+   ```
+
+4. **Verificar en DockerHub:**
+   - Visita [https://hub.docker.com/r/usuario-dockerhub/almanaque-nautico](https://hub.docker.com/)
+   - La imagen estará disponible para que otros la descarguen
+
+**Alternativa (todo en uno):**
+
+```bash
+docker login
+docker build -t usuario-dockerhub/almanaque-nautico:v1.0.0 . && docker push usuario-dockerhub/almanaque-nautico:v1.0.0
+```
 
 ## 📄 Licencia
 
