@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 Este proyecto está configurado para un entorno de desarrollo reproducible:
 
-1. Requisitos: Docker (debe estar instalado y en ejecución) y la extensión **Dev Containers** para VS Code.
+1. Requisitos: Docker Desktop (debe estar instalado y en ejecución) y la extensión **Dev Containers** para VS Code.
 2. Abrir la carpeta en VS Code.
 3. Al recibir el aviso, seleccionar **"Reopen in Container"** (o vía paleta: `F1` > `Dev Containers: Reopen in Container`).
 
