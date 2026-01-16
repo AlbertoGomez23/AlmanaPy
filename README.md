@@ -12,7 +12,7 @@ Este proyecto consiste en la modernización del software de generación del Alma
 ## 📥 Instalación
 
 ```bash
-git clone https://github.com/AlbertoGomez23/PROYECTO-PINF
+git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
 cd PROYECTO-PINF
 ```
 
