@@ -1,4 +1,4 @@
-# Almanaque Náutico - Modernización (PROYECTO PINF)
+# AlmanaPy
 
 Este proyecto consiste en la modernización del software de generación del Almanaque Náutico del Real Instituto y Observatorio de la Armada (ROA). Desarrollado en colaboración entre la Universidad de Cádiz y la Armada, el trabajo se centra en la migración de la lógica de cálculo desde Fortran 77 a Python 3.12+.
 
@@ -19,8 +19,8 @@ Entorno de desarrollo reproducible con todas las dependencias preinstaladas:
 2. Clonar el repositorio:
 
    ```bash
-   git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
-   cd PROYECTO-PINF
+   git clone https://github.com/AlbertoGomez23/AlmanaPy.git
+   cd AlmanaPy
    ```
 
 3. Abrir la carpeta en VS Code.
@@ -43,8 +43,8 @@ Accede a la aplicación en `http://localhost:8501`
 Construir y ejecutar la imagen localmente con Docker Compose:
 
 ```bash
-git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
-cd PROYECTO-PINF
+git clone https://github.com/AlbertoGomez23/AlmanaPy.git
+cd AlmanaPy
 docker-compose up --build
 ```
 
@@ -58,8 +58,8 @@ Para ejecutar directamente en tu sistema sin contenedores:
 2. Clonar el repositorio:
 
    ```bash
-   git clone https://github.com/AlbertoGomez23/PROYECTO-PINF.git
-   cd PROYECTO-PINF
+   git clone https://github.com/AlbertoGomez23/AlmanaPy.git
+   cd AlmanaPy
    ```
 
 3. Crear y activar un entorno virtual:
